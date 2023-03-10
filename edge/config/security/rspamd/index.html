@@ -12,14 +12,14 @@
         <meta name="author" content="docker-mailserver (Github Organization)">
       
       
-        <link rel="canonical" href="https://docker-mailserver.github.io/docker-mailserver/edge/config/advanced/ipv6/">
+        <link rel="canonical" href="https://docker-mailserver.github.io/docker-mailserver/edge/config/security/rspamd/">
       
       <link rel="icon" href="../../../assets/logo/favicon-32x32.png">
       <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.3.9">
     
     
       
-        <title>Advanced | IPv6 - Docker Mailserver</title>
+        <title>Security | Rspamd - Docker Mailserver</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#background" class="md-skip">
+        <a href="#about" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Advanced | IPv6
+              Security | Rspamd
             
           </span>
         </div>
@@ -630,12 +630,14 @@
               
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_4_5" type="checkbox" id="__nav_4_5" checked>
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_5" type="checkbox" id="__nav_4_5" checked>
       
       
       
@@ -658,7 +660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../security/understanding-the-ports/" class="md-nav__link">
+      <a href="../understanding-the-ports/" class="md-nav__link">
         Understanding the Ports
       </a>
     </li>
@@ -672,7 +674,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../security/ssl/" class="md-nav__link">
+      <a href="../ssl/" class="md-nav__link">
         SSL/TLS
       </a>
     </li>
@@ -686,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../security/fail2ban/" class="md-nav__link">
+      <a href="../fail2ban/" class="md-nav__link">
         Fail2Ban
       </a>
     </li>
@@ -700,7 +702,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../security/mail_crypt/" class="md-nav__link">
+      <a href="../mail_crypt/" class="md-nav__link">
         Mail Encryption
       </a>
     </li>
@@ -712,11 +714,177 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../security/rspamd/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Rspamd
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Rspamd
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#about" class="md-nav__link">
+    About
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-default-configuration" class="md-nav__link">
+    The Default Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="The Default Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-of-operation" class="md-nav__link">
+    Mode of Operation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#persistence-with-redis" class="md-nav__link">
+    Persistence with Redis
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    Modules
+  </a>
+  
+    <nav class="md-nav" aria-label="Modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#disabled-by-default" class="md-nav__link">
+    Disabled By Default
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anti-virus-clamav" class="md-nav__link">
+    Anti-Virus (ClamAV)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rbls-realtime-blacklists-dnsbls-dns-based-blacklists" class="md-nav__link">
+    RBLs (Realtime Blacklists) / DNSBLs (DNS-based Blacklists)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#providing-custom-settings-overriding-settings" class="md-nav__link">
+    Providing Custom Settings &amp; Overriding Settings
+  </a>
+  
+    <nav class="md-nav" aria-label="Providing Custom Settings &amp; Overriding Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manually" class="md-nav__link">
+    Manually
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-the-help-of-a-custom-file" class="md-nav__link">
+    With the Help of a Custom File
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples-advanced-configuration" class="md-nav__link">
+    Examples &amp; Advanced Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples &amp; Advanced Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-very-basic-configuration" class="md-nav__link">
+    A Very Basic Configuration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adjusting-and-extending-the-very-basic-configuration" class="md-nav__link">
+    Adjusting and Extending The Very Basic Configuration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dkim-signing" class="md-nav__link">
+    DKIM Signing
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#abusix-integration" class="md-nav__link">
+    Abusix Integration
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -794,14 +962,12 @@
               
   
   
-    
-  
   
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_8" type="checkbox" id="__nav_4_8" checked>
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_4_8" type="checkbox" id="__nav_4_8" checked>
       
       
       
@@ -824,7 +990,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../optional-config/" class="md-nav__link">
+      <a href="../../advanced/optional-config/" class="md-nav__link">
         Optional Configuration
       </a>
     </li>
@@ -864,7 +1030,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../maintenance/update-and-cleanup/" class="md-nav__link">
+      <a href="../../advanced/maintenance/update-and-cleanup/" class="md-nav__link">
         Update and Cleanup
       </a>
     </li>
@@ -911,7 +1077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../override-defaults/dovecot/" class="md-nav__link">
+      <a href="../../advanced/override-defaults/dovecot/" class="md-nav__link">
         Dovecot
       </a>
     </li>
@@ -925,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../override-defaults/postfix/" class="md-nav__link">
+      <a href="../../advanced/override-defaults/postfix/" class="md-nav__link">
         Postfix
       </a>
     </li>
@@ -939,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../override-defaults/user-patches/" class="md-nav__link">
+      <a href="../../advanced/override-defaults/user-patches/" class="md-nav__link">
         Modifications via Script
       </a>
     </li>
@@ -960,7 +1126,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../auth-ldap/" class="md-nav__link">
+      <a href="../../advanced/auth-ldap/" class="md-nav__link">
         LDAP Authentication
       </a>
     </li>
@@ -974,7 +1140,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../mail-sieve/" class="md-nav__link">
+      <a href="../../advanced/mail-sieve/" class="md-nav__link">
         Email Filtering with Sieve
       </a>
     </li>
@@ -988,7 +1154,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../mail-fetchmail/" class="md-nav__link">
+      <a href="../../advanced/mail-fetchmail/" class="md-nav__link">
         Email Gathering with Fetchmail
       </a>
     </li>
@@ -1028,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../mail-forwarding/relay-hosts/" class="md-nav__link">
+      <a href="../../advanced/mail-forwarding/relay-hosts/" class="md-nav__link">
         Relay Hosts
       </a>
     </li>
@@ -1042,7 +1208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../mail-forwarding/aws-ses/" class="md-nav__link">
+      <a href="../../advanced/mail-forwarding/aws-ses/" class="md-nav__link">
         AWS SES
       </a>
     </li>
@@ -1063,7 +1229,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../full-text-search/" class="md-nav__link">
+      <a href="../../advanced/full-text-search/" class="md-nav__link">
         Full-Text Search
       </a>
     </li>
@@ -1077,7 +1243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kubernetes/" class="md-nav__link">
+      <a href="../../advanced/kubernetes/" class="md-nav__link">
         Kubernetes
       </a>
     </li>
@@ -1089,62 +1255,11 @@
               
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          IPv6
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../advanced/ipv6/" class="md-nav__link">
         IPv6
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#background" class="md-nav__link">
-    Background
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#setup-steps" class="md-nav__link">
-    Setup steps
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#further-discussion" class="md-nav__link">
-    Further Discussion
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1156,7 +1271,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../podman/" class="md-nav__link">
+      <a href="../../advanced/podman/" class="md-nav__link">
         Podman
       </a>
     </li>
@@ -1170,7 +1285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../dovecot-master-accounts/" class="md-nav__link">
+      <a href="../../advanced/dovecot-master-accounts/" class="md-nav__link">
         Dovecot Master Accounts
       </a>
     </li>
@@ -1521,23 +1636,138 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#background" class="md-nav__link">
-    Background
+  <a href="#about" class="md-nav__link">
+    About
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#setup-steps" class="md-nav__link">
-    Setup steps
+  <a href="#the-default-configuration" class="md-nav__link">
+    The Default Configuration
   </a>
+  
+    <nav class="md-nav" aria-label="The Default Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-of-operation" class="md-nav__link">
+    Mode of Operation
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#persistence-with-redis" class="md-nav__link">
+    Persistence with Redis
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    Modules
+  </a>
+  
+    <nav class="md-nav" aria-label="Modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#disabled-by-default" class="md-nav__link">
+    Disabled By Default
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anti-virus-clamav" class="md-nav__link">
+    Anti-Virus (ClamAV)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rbls-realtime-blacklists-dnsbls-dns-based-blacklists" class="md-nav__link">
+    RBLs (Realtime Blacklists) / DNSBLs (DNS-based Blacklists)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#further-discussion" class="md-nav__link">
-    Further Discussion
+  <a href="#providing-custom-settings-overriding-settings" class="md-nav__link">
+    Providing Custom Settings &amp; Overriding Settings
   </a>
+  
+    <nav class="md-nav" aria-label="Providing Custom Settings &amp; Overriding Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manually" class="md-nav__link">
+    Manually
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-the-help-of-a-custom-file" class="md-nav__link">
+    With the Help of a Custom File
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples-advanced-configuration" class="md-nav__link">
+    Examples &amp; Advanced Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples &amp; Advanced Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-very-basic-configuration" class="md-nav__link">
+    A Very Basic Configuration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adjusting-and-extending-the-very-basic-configuration" class="md-nav__link">
+    Adjusting and Extending The Very Basic Configuration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dkim-signing" class="md-nav__link">
+    DKIM Signing
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#abusix-integration" class="md-nav__link">
+    Abusix Integration
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1553,49 +1783,182 @@
             <article class="md-content__inner md-typeset">
               
                 
-  <a href="https://github.com/docker-mailserver/docker-mailserver/edit/master/docs/content/config/advanced/ipv6.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/docker-mailserver/docker-mailserver/edit/master/docs/content/config/security/rspamd.md" title="Edit this page" class="md-content__button md-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
 
-  <h1>IPv6</h1>
+  <h1>Rspamd</h1>
 
-<h2 id="background"><a class="toclink" href="#background">Background</a></h2>
-<p>If your container host supports IPv6, then <code>docker-mailserver</code> will automatically accept IPv6 connections by way of the docker host's IPv6. However, incoming mail will fail SPF checks because they will appear to come from the IPv4 gateway that docker is using to proxy the IPv6 connection (<code>172.20.0.1</code> is the gateway).</p>
-<p>This can be solved by supporting IPv6 connections all the way to the <code>docker-mailserver</code> container.</p>
-<h2 id="setup-steps"><a class="toclink" href="#setup-steps">Setup steps</a></h2>
-<div class="highlight"><pre><span></span><code><span class="gi">+++ b/serv/docker-compose.yml</span><span class="w"></span>
-<span class="gu">@@ -1,4 +1,4 @@</span><span class="w"></span>
-<span class="gd">-version: &#39;2&#39;</span><span class="w"></span>
-<span class="gi">+version: &#39;2.1&#39;</span><span class="w"></span>
-
-<span class="gu">@@ -32,6 +32,16 @@ services:</span><span class="w"></span>
-
-<span class="gi">+  ipv6nat:</span><span class="w"></span>
-<span class="gi">+    image: robbertkl/ipv6nat</span><span class="w"></span>
-<span class="gi">+    restart: always</span><span class="w"></span>
-<span class="gi">+    network_mode: &quot;host&quot;</span><span class="w"></span>
-<span class="gi">+    cap_add:</span><span class="w"></span>
-<span class="gi">+      - NET_ADMIN</span><span class="w"></span>
-<span class="gi">+      - SYS_MODULE</span><span class="w"></span>
-<span class="gi">+    volumes:</span><span class="w"></span>
-<span class="gi">+      - /var/run/docker.sock:/var/run/docker.sock:ro</span><span class="w"></span>
-<span class="gi">+      - /lib/modules:/lib/modules:ro</span><span class="w"></span>
-
-<span class="gu">@@ -306,4 +316,13 @@ networks:</span><span class="w"></span>
-
-<span class="gi">+  default:</span><span class="w"></span>
-<span class="gi">+    driver: bridge</span><span class="w"></span>
-<span class="gi">+    enable_ipv6: true</span><span class="w"></span>
-<span class="gi">+    ipam:</span><span class="w"></span>
-<span class="gi">+      driver: default</span><span class="w"></span>
-<span class="gi">+      config:</span><span class="w"></span>
-<span class="gi">+        - subnet: fd00:0123:4567::/48</span><span class="w"></span>
-<span class="gi">+          gateway: fd00:0123:4567::1</span><span class="w"></span>
+<div class="admonition warning">
+<p class="admonition-title">The current state of Rspamd integration into DMS</p>
+<p>Recent pull requests have stabilized integration of Rspamd to a point that we encourage users to test the feature. We are confident that there are no major bugs in our integration that make using Rspamd infeasible. Please note that there may still be (breaking) changes ahead as integration is still work in progress!</p>
+<p>We expect to stabilize this feature with version <code>v12.1.0</code>.</p>
+</div>
+<h2 id="about"><a class="toclink" href="#about">About</a></h2>
+<p>Rspamd is a <a href="https://rspamd.com/">"fast, free and open-source spam filtering system"</a>. DMS integrates Rspamd like any other service. We provide a very simple but easy to maintain setup of Rspamd.</p>
+<p>If you want to have a look at the default configuration files for Rspamd that DMS packs, navigate to <a href="https://github.com/docker-mailserver/docker-mailserver/tree/master/target/rspamd"><code>target/rspamd/</code> inside the repository</a>. Please consult the <a href="#the-default-configuration">section "The Default Configuration"</a> section down below for a written overview.</p>
+<div class="admonition note">
+<p class="admonition-title">AMD64 vs ARM64</p>
+<p>We are currently doing a best-effort installation of Rspamd for ARM64 (from the Debian backports repository for Debian 11). The current version difference is two minor versions (AMD64 is at version 3.4, ARM64 at 3.2 [13th Feb 2023]).</p>
+<p>Maintainers noticed only few differences, some of them with a big impact though. For those running Rspamd on ARM64, we recommend <a href="#with-the-help-of-a-custom-file">disabling</a> the <a href="https://rspamd.com/doc/modules/dkim_signing.html">DKIM signing module</a> if you don't use it.</p>
+</div>
+<h2 id="the-default-configuration"><a class="toclink" href="#the-default-configuration">The Default Configuration</a></h2>
+<h3 id="mode-of-operation"><a class="toclink" href="#mode-of-operation">Mode of Operation</a></h3>
+<p>The proxy worker operates in <a href="https://rspamd.com/doc/workers/rspamd_proxy.html#self-scan-mode">self-scan mode</a>. This simplifies the setup as we do not require a normal worker. You can easily change this though by <a href="#providing-custom-settings-overriding-settings">overriding the configuration by DMS</a>.</p>
+<p>DMS does not set a default password for the controller worker. You may want to do that yourself. In setups where you already have an authentication provider in front of the Rspamd webpage, you may want to <a href="#with-the-help-of-a-custom-file">set the <code>secure_ip</code> option to <code>"0.0.0.0/0"</code> for the controller worker</a> to disable password authentication inside Rspamd completely.</p>
+<h3 id="persistence-with-redis"><a class="toclink" href="#persistence-with-redis">Persistence with Redis</a></h3>
+<p>When Rspamd is enabled, we implicitly also start an instance of Redis in the container. Redis is configured to persist it's data via RDB snapshots to disk in the directory <code>/var/lib/redis</code> (<em>which is a symbolic link to <code>/var/mail-state/lib-redis/</code> when <a href="../../environment/#one_dir"><code>ONE_DIR=1</code></a> and a volume is mounted to <code>/var/mail-state/</code></em>). With the volume mount the snapshot will restore the Redis data across container restarts, and provide a way to keep backup.</p>
+<p>Redis uses <code>/etc/redis/redis.conf</code> for configuration. We adjust this file when enabling the internal Redis service. If you have an external instance of Redis to use, the internal Redis service can be opt-out via setting the ENV  <a href="../../environment/#enable_rspamd_redis"><code>ENABLE_RSPAMD_REDIS=0</code></a> (<em>link also details required changes to the DMS rspamd config</em>).</p>
+<h3 id="modules"><a class="toclink" href="#modules">Modules</a></h3>
+<p>You can find a list of all Rspamd modules <a href="https://rspamd.com/doc/modules/">on their website</a>.</p>
+<h4 id="disabled-by-default"><a class="toclink" href="#disabled-by-default">Disabled By Default</a></h4>
+<p>DMS disables certain modules (clickhouse, elastic, greylist, neural, reputation, spamassassin, url_redirector, metric_exporter) by default. We believe these are not required in a standard setup, and they would otherwise needlessly use system resources.</p>
+<h4 id="anti-virus-clamav"><a class="toclink" href="#anti-virus-clamav">Anti-Virus (ClamAV)</a></h4>
+<p>You can choose to enable ClamAV, and Rspamd will then use it to check for viruses. Just set the environment variable <code>ENABLE_CLAMAV=1</code>.</p>
+<h4 id="rbls-realtime-blacklists-dnsbls-dns-based-blacklists"><a class="toclink" href="#rbls-realtime-blacklists-dnsbls-dns-based-blacklists">RBLs (Realtime Blacklists) / DNSBLs (DNS-based Blacklists)</a></h4>
+<p>The <a href="https://rspamd.com/doc/modules/rbl.html">RBL module</a> is enabled by default. As a consequence, Rspamd will perform DNS lookups to a variety of blacklists. Whether an RBL or a DNSBL is queried depends on where the domain name was obtained: RBL servers are queried with IP addresses extracted from message headers, DNSBL server are queried with domains and IP addresses extracted from the message body [<a href="https://forum.eset.com/topic/25277-dnsbl-vs-rbl-mail-security/?do=findComment&amp;comment=119818">source</a>].</p>
+<div class="admonition danger">
+<p class="admonition-title">Rspamd and DNS Block Lists</p>
+<p>When the RBL module is enabled, Rspamd will do a variety of DNS requests to (amongst other things) DNSBLs. There are a variety of issues involved when using DNSBLs. Rspamd will try to mitigate some of them by properly evaluating all return codes. This evaluation is a best effort though, so if the DNSBL operators change or add return codes, it may take a while for Rspamd to adjust as well.</p>
+<p>If you want to use DNSBLs, <strong>try to use your own DNS resolver</strong> and make sure it is set up correctly, i.e. it should be a non-public &amp; <strong>recursive</strong> resolver. Otherwise, you might not be able (<a href="https://www.spamhaus.org/faq/section/DNSBL%20Usage#365">see this Spamhaus post</a>) to make use of the block lists.</p>
+</div>
+<h2 id="providing-custom-settings-overriding-settings"><a class="toclink" href="#providing-custom-settings-overriding-settings">Providing Custom Settings &amp; Overriding Settings</a></h2>
+<h3 id="manually"><a class="toclink" href="#manually">Manually</a></h3>
+<p>DMS brings sane default settings for Rspamd. They are located at <code>/etc/rspamd/local.d/</code> inside the container (or <code>target/rspamd/local.d/</code> in the repository). If you want to change these settings and / or provide your own settings, you can</p>
+<ol>
+<li>place files at <code>/etc/rspamd/override.d/</code> which will override Rspamd settings and DMS settings</li>
+<li>(re-)place files at <code>/etc/rspamd/local.d/</code> to override DMS settings and merge them with Rspamd settings</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Clashing Overrides</p>
+<p>Note that when also <a href="#with-the-help-of-a-custom-file">using the <code>rspamd-commands</code> file</a>, files in <code>override.d</code> may be overwritten in case you adjust them manually and with the help of the file.</p>
+</div>
+<h3 id="with-the-help-of-a-custom-file"><a class="toclink" href="#with-the-help-of-a-custom-file">With the Help of a Custom File</a></h3>
+<p>DMS provides the ability to do simple adjustments to Rspamd modules with the help of a single file. Just place a file called <code>rspamd-modules.conf</code> into the directory <code>docker-data/dms/config/</code> (which translates to <code>/tmp/docker-mailserver/</code> in the container). If this file is present, DMS will evaluate it. The structure is <em>very</em> simple. Each line in the file looks like this:</p>
+<div class="highlight"><pre><span></span><code>COMMAND ARGUMENT1 ARGUMENT2 ARGUMENT3
 </code></pre></div>
-<h2 id="further-discussion"><a class="toclink" href="#further-discussion">Further Discussion</a></h2>
-<p>See <a href="https://github.com/docker-mailserver/docker-mailserver/issues/1438">#1438</a></p>
+<p>where <code>COMMAND</code> can be:</p>
+<ol>
+<li><code>disable-module</code>: disables the module with name <code>ARGUMENT1</code></li>
+<li><code>enable-module</code>: explicitly enables the module with name <code>ARGUMENT1</code></li>
+<li><code>set-option-for-module</code>: sets the value for option <code>ARGUMENT2</code> to <code>ARGUMENT3</code> inside module <code>ARGUMENT1</code></li>
+<li><code>set-option-for-controller</code>: set the value of option <code>ARGUMENT1</code> to <code>ARGUMENT2</code> for the controller worker</li>
+<li><code>set-option-for-proxy</code>: set the value of option <code>ARGUMENT1</code> to <code>ARGUMENT2</code> for the proxy worker</li>
+<li><code>set-common-option</code>: set the option <code>ARGUMENT1</code> that <a href="https://rspamd.com/doc/configuration/options.html">defines basic Rspamd behaviour</a> to value <code>ARGUMENT2</code></li>
+<li><code>add-line</code>: this will add the complete line after <code>ARGUMENT1</code> (with all characters) to the file <code>/etc/rspamd/override.d/&lt;ARGUMENT1&gt;</code></li>
+</ol>
+<div class="admonition example">
+<p class="admonition-title">An Example Is <a href="#adjusting-and-extending-the-very-basic-configuration">Shown Down Below</a></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">File Names &amp; Extensions</p>
+<p>For command 1 - 3, we append the <code>.conf</code> suffix to the module name to get the correct file name automatically. For commands 4 - 6, the file name is fixed (you don't even need to provide it). For command 7, you will need to provide the whole file name (including the suffix) yourself!</p>
+</div>
+<p>You can also have comments (the line starts with <code>#</code>) and blank lines in <code>rspamd-modules.conf</code> - they are properly handled and not evaluated.</p>
+<div class="admonition tip">
+<p class="admonition-title">Adjusting Modules This Way</p>
+<p>These simple commands are meant to give users the ability to <em>easily</em> alter modules and their options. As a consequence, they are not powerful enough to enable multi-line adjustments. If you need to do something more complex, we advise to do that <a href="#manually">manually</a>!</p>
+</div>
+<h2 id="examples-advanced-configuration"><a class="toclink" href="#examples-advanced-configuration">Examples &amp; Advanced Configuration</a></h2>
+<h3 id="a-very-basic-configuration"><a class="toclink" href="#a-very-basic-configuration">A Very Basic Configuration</a></h3>
+<p>You want to start using Rspamd? Rspamd is disabled by default, so you need to set the following environment variables:</p>
+<div class="highlight"><pre><span></span><code><span class="na">ENABLE_RSPAMD</span><span class="o">=</span><span class="s">1</span><span class="w"></span>
+<span class="na">ENABLE_OPENDKIM</span><span class="o">=</span><span class="s">0</span><span class="w"></span>
+<span class="na">ENABLE_OPENDMARC</span><span class="o">=</span><span class="s">0</span><span class="w"></span>
+<span class="na">ENABLE_AMAVIS</span><span class="o">=</span><span class="s">0</span><span class="w"></span>
+<span class="na">ENABLE_SPAMASSASSIN</span><span class="o">=</span><span class="s">0</span><span class="w"></span>
+</code></pre></div>
+<p>This will enable Rspamd and disable services you don't need when using Rspamd. Note that with this setup, the default DKIM signing that DMS provides does not work (as it is disabled)! To solve this issue, look at <a href="#dkim-signing">this subsection</a>.</p>
+<h3 id="adjusting-and-extending-the-very-basic-configuration"><a class="toclink" href="#adjusting-and-extending-the-very-basic-configuration">Adjusting and Extending The Very Basic Configuration</a></h3>
+<p>Rspamd is running, but you want or need to adjust it?</p>
+<ol>
+<li>Say you want to be able to easily look at the frontend Rspamd provides on port 11334 (default) without the need to enter a password (maybe because you already provide authorization and authentication). You will need to adjust the controller worker: create a file called <code>rspamd-modules.conf</code> and add the line <code>set-option-for-controller secure_ip "0.0.0.0/0"</code>. Place the file <code>rspamd-modules.conf</code> inside the directory on the host you mount to <code>/tmp/docker-mailserver/</code> inside the container (in our documentation, we use <code>docker-data/dms/config</code> on the host for this purpose). And you're done! Note: this disables authentication on the website - make sure you know what you're doing!</li>
+<li>You additionally want to enable the auto-spam-learning for the Bayes module? No problem, just add another line to <code>rspamd-modules.conf</code> that looks like this: <code>set-option-for-module classifier-bayes autolearn true</code>.</li>
+<li>But the chartable module gets on your nerves? Just disable it by adding another line: <code>disable-module chartable</code>.</li>
+</ol>
+<h3 id="dkim-signing"><a class="toclink" href="#dkim-signing">DKIM Signing</a></h3>
+<p>By default, DMS offers no option to generate and configure signing e-mails with DKIM. This is because the parsing would be difficult. But don't worry: the process is relatively straightforward nevertheless. The <a href="https://rspamd.com/doc/modules/dkim_signing.html">official Rspamd documentation for the DKIM signing module</a> is pretty good. Basically, you need to</p>
+<ol>
+<li><code>exec</code> into the container</li>
+<li>Run a command similar to <code>rspamadm dkim_keygen -s 'woosh' -b 2048 -d example.com -k example.private &gt; example.txt</code>, adjusted to your needs</li>
+<li>Make sure to then persists the files <code>example.private</code> and <code>example.txt</code> (created in step 2) in the container (for example with a Docker bind mount)</li>
+<li>Create a configuration for the DKIM signing module, i.e. a file called <code>dkim_signing.conf</code> that you mount to <code>/etc/rspamd/local.d/</code> or <code>/etc/rspamd/override.d/</code>. We provide example configurations down below. We recommend mounting this file into the container as well (as described <a href="#manually">here</a>); do not use <a href="#with-the-help-of-a-custom-file"><code>rspamd-modules.conf</code></a> for this purpose.</li>
+</ol>
+<details class="example">
+<summary>DKIM Signing Module Configuration Examples</summary>
+<p>A simple configuration could look like this:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># documentation: https://rspamd.com/doc/modules/dkim_signing.html</span><span class="w"></span>
+
+<span class="na">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+
+<span class="na">sign_authenticated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+<span class="na">sign_local</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+
+<span class="na">use_domain</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;header&quot;;</span><span class="w"></span>
+<span class="na">use_redis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">false; # don&#39;t change unless Redis also provides the DKIM keys</span><span class="w"></span>
+<span class="na">use_esld</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+<span class="na">check_pubkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+
+<span class="na">domain {</span><span class="w"></span>
+<span class="w">    </span><span class="na">example.com {</span><span class="w"></span>
+<span class="w">        </span><span class="na">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;/path/to/example.private&quot;;</span><span class="w"></span>
+<span class="w">        </span><span class="na">selector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;woosh&quot;;</span><span class="w"></span>
+<span class="w">    </span><span class="na">}</span><span class="w"></span>
+<span class="na">}</span><span class="w"></span>
+</code></pre></div>
+<p>If you have multiple domains and you want to sign with the modern ED25519 elliptic curve but also with RSA (you will likely want to have RSA as a fallback!):</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># documentation: https://rspamd.com/doc/modules/dkim_signing.html</span><span class="w"></span>
+
+<span class="na">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+
+<span class="na">sign_authenticated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+<span class="na">sign_local</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+
+<span class="na">use_domain</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;header&quot;;</span><span class="w"></span>
+<span class="na">use_redis</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">false; # don&#39;t change unless Redis also provides the DKIM keys</span><span class="w"></span>
+<span class="na">use_esld</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+<span class="na">check_pubkey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true;</span><span class="w"></span>
+
+<span class="na">domain {</span><span class="w"></span>
+<span class="w">    </span><span class="na">example.com {</span><span class="w"></span>
+<span class="w">        </span><span class="na">selectors [</span><span class="w"></span>
+<span class="w">            </span><span class="na">{</span><span class="w"></span>
+<span class="w">                </span><span class="na">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;/path/to/com.example.rsa.private&quot;;</span><span class="w"></span>
+<span class="w">                </span><span class="na">selector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;dkim-rsa&quot;;</span><span class="w"></span>
+<span class="w">            </span><span class="na">},</span><span class="w"></span>
+<span class="w">            </span><span class="na">{</span><span class="w"></span>
+<span class="w">              </span><span class="na">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/path/to/com.example.ed25519.private&quot;;</span><span class="w"></span>
+<span class="w">              </span><span class="na">selector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;dkim-ed25519&quot;;</span><span class="w"></span>
+<span class="w">            </span><span class="na">}</span><span class="w"></span>
+<span class="w">      </span><span class="na">]</span><span class="w"></span>
+<span class="w">    </span><span class="na">}</span><span class="w"></span>
+<span class="w">    </span><span class="na">example.org {</span><span class="w"></span>
+<span class="w">        </span><span class="na">selectors [</span><span class="w"></span>
+<span class="w">            </span><span class="na">{</span><span class="w"></span>
+<span class="w">                </span><span class="na">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;/path/to/org.example.rsa.private&quot;;</span><span class="w"></span>
+<span class="w">                </span><span class="na">selector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;dkim-rsa&quot;;</span><span class="w"></span>
+<span class="w">            </span><span class="na">},</span><span class="w"></span>
+<span class="w">            </span><span class="na">{</span><span class="w"></span>
+<span class="w">              </span><span class="na">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;/path/to/org.example.ed25519.private&quot;;</span><span class="w"></span>
+<span class="w">              </span><span class="na">selector</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;dkim-ed25519&quot;;</span><span class="w"></span>
+<span class="w">            </span><span class="na">}</span><span class="w"></span>
+<span class="w">        </span><span class="na">]</span><span class="w"></span>
+<span class="w">    </span><span class="na">}</span><span class="w"></span>
+<span class="na">}</span><span class="w"></span>
+</code></pre></div>
+</details>
+<h3 id="abusix-integration"><a class="toclink" href="#abusix-integration"><em>Abusix</em> Integration</a></h3>
+<p>This subsection gives information about the integration of <a href="https://abusix.com/">Abusix</a>, "a set of blocklists that work as an additional email security layer for your existing mail environment". The setup is straight-forward and well documented:</p>
+<ol>
+<li><a href="https://app.abusix.com/signup">Create an account</a></li>
+<li>Retrieve your API key</li>
+<li>Navigate to the <a href="https://docs.abusix.com/abusix-mail-intelligence/gbG8EcJ3x3fSUv8cMZLiwA/getting-started/dmw9dcwSGSNQiLTssFAnBW#rspamd">"Getting Started" documentation for Rspamd</a> and follow the steps described there</li>
+<li>Make sure to change <code>&lt;APIKEY&gt;</code> to your private API key</li>
+</ol>
+<p>We recommend mounting the files directly into the container, as they are rather big and not manageable with the <a href="#with-the-help-of-a-custom-file">modules script</a>. If mounted to the correct location, Rspamd will automatically pick them up.</p>
+<p>While <em>Abusix</em> can be integrated into Postfix, Postscreen and a multitude of other software, we recommend integrating <em>Abusix</em> only into a single piece of software running in your mail server - everything else would be excessive and wasting queries. Moreover, we recommend the integration into suitable filtering software and not Postfix itself, as software like Postscreen or Rspamd can properly evaluate the return codes and other configuration.</p>
 
               
             </article>
@@ -1616,7 +1979,7 @@
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="../kubernetes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Kubernetes" rel="prev">
+        <a href="../mail_crypt/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Mail Encryption" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -1625,20 +1988,20 @@
               <span class="md-footer__direction">
                 Previous
               </span>
-              Kubernetes
+              Mail Encryption
             </div>
           </div>
         </a>
       
       
         
-        <a href="../podman/" class="md-footer__link md-footer__link--next" aria-label="Next: Podman" rel="next">
+        <a href="../../troubleshooting/debugging/" class="md-footer__link md-footer__link--next" aria-label="Next: Debugging" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Podman
+              Debugging
             </div>
           </div>
           <div class="md-footer__button md-icon">
