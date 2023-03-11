@@ -20,3 +20,8 @@ docker-data/
 test/duplicate_configs/
 test/config/dovecot-masters.cf
 test/config/postfix-accounts.cf
+secret/*
+data/mail-*
+data/dms/mail-*
+docker-data/dms/mail-*
+docker-data/mail-*
