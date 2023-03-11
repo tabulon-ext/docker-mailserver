@@ -25,3 +25,4 @@ data/mail-*
 data/dms/mail-*
 docker-data/dms/mail-*
 docker-data/mail-*
+secrets/*
