@@ -24,6 +24,10 @@ All notable changes to this project will be documented in this file. The format 
 - **Dovecot**
   - FTS solr config: pinned to solr:10.0, explictly start solr in user managed mode and remove the attachment text extraction example. 
 
+### Documentation
+
+- Added a community guide for enabling Dovecot 2.4 mailbox compression ([#4578](https://github.com/docker-mailserver/docker-mailserver/pull/4578))
+
 ## [v16.0.1](https://github.com/docker-mailserver/docker-mailserver/releases/tag/v16.0.1)
 
 ### Added
