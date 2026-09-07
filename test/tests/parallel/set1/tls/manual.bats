@@ -20,7 +20,7 @@ function setup_file() {
   export TEST_DOMAIN='example.test'
 
   local CUSTOM_SETUP_ARGUMENTS=(
-    --volume "${PWD}/test/test-files/ssl/${TEST_DOMAIN}/with_ca/ecdsa/:/config/ssl/:ro"
+    --volume "${PWD}/test/files/ssl/${TEST_DOMAIN}/with_ca/ecdsa/:/config/ssl/:ro"
     --env LOG_LEVEL='trace'
     --env SSL_TYPE='manual'
     --env TLS_LEVEL='modern'
@@ -59,21 +59,21 @@ function teardown_file() { _default_teardown ; }
   assert_success
   assert_output "smtpd_tls_chain_files = ${PRIMARY_KEY} ${PRIMARY_CERT} ${FALLBACK_KEY} ${FALLBACK_CERT}"
 
-  _run_in_container grep '^ssl_key =' "${DOVECOT_CONFIG_SSL}"
+  _run_in_container grep '^ssl_server_key_file =' "${DOVECOT_CONFIG_SSL}"
   assert_success
-  assert_output "ssl_key = <${PRIMARY_KEY}"
+  assert_output "ssl_server_key_file = ${PRIMARY_KEY}"
 
-  _run_in_container grep '^ssl_cert =' "${DOVECOT_CONFIG_SSL}"
+  _run_in_container grep '^ssl_server_cert_file =' "${DOVECOT_CONFIG_SSL}"
   assert_success
-  assert_output "ssl_cert = <${PRIMARY_CERT}"
+  assert_output "ssl_server_cert_file = ${PRIMARY_CERT}"
 
-  _run_in_container grep '^ssl_alt_key =' "${DOVECOT_CONFIG_SSL}"
+  _run_in_container grep '^ssl_server_alt_key_file =' "${DOVECOT_CONFIG_SSL}"
   assert_success
-  assert_output "ssl_alt_key = <${FALLBACK_KEY}"
+  assert_output "ssl_server_alt_key_file = ${FALLBACK_KEY}"
 
-  _run_in_container grep '^ssl_alt_cert =' "${DOVECOT_CONFIG_SSL}"
+  _run_in_container grep '^ssl_server_alt_cert_file =' "${DOVECOT_CONFIG_SSL}"
   assert_success
-  assert_output "ssl_alt_cert = <${FALLBACK_CERT}"
+  assert_output "ssl_server_alt_cert_file = ${FALLBACK_CERT}"
 }
 
 @test "manual configuration copied files correctly " {
@@ -108,10 +108,10 @@ function teardown_file() { _default_teardown ; }
 
 @test "manual cert changes are picked up by check-for-changes" {
   printf '%s' 'someThingsChangedHere' \
-    >>"$(pwd)/test/test-files/ssl/${TEST_DOMAIN}/with_ca/ecdsa/key.ecdsa.pem"
+    >>"$(pwd)/test/files/ssl/${TEST_DOMAIN}/with_ca/ecdsa/key.ecdsa.pem"
 
   run timeout 15 docker exec "${CONTAINER_NAME}" bash -c "tail -F /var/log/supervisor/changedetector.log | sed '/Manual certificates have changed/ q'"
   assert_success
 
-  sed -i '/someThingsChangedHere/d' "$(pwd)/test/test-files/ssl/${TEST_DOMAIN}/with_ca/ecdsa/key.ecdsa.pem"
+  sed -i '/someThingsChangedHere/d' "$(pwd)/test/files/ssl/${TEST_DOMAIN}/with_ca/ecdsa/key.ecdsa.pem"
 }
