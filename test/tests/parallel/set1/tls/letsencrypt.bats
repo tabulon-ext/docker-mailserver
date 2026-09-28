@@ -45,7 +45,7 @@ function _initial_setup() {
 
   # Test that certificate files exist for the configured `hostname`:
   _should_have_valid_config "${TARGET_DOMAIN}" 'privkey.pem' 'fullchain.pem'
-  _should_succesfully_negotiate_tls "${TARGET_DOMAIN}"
+  _should_successfully_negotiate_tls "${TARGET_DOMAIN}"
   _should_not_support_fqdn_in_cert 'example.test'
 }
 
@@ -65,7 +65,7 @@ function _initial_setup() {
 
   #test domain has certificate files
   _should_have_valid_config "${TARGET_DOMAIN}" 'privkey.pem' 'fullchain.pem'
-  _should_succesfully_negotiate_tls "${TARGET_DOMAIN}"
+  _should_successfully_negotiate_tls "${TARGET_DOMAIN}"
   _should_not_support_fqdn_in_cert 'mail.example.test'
 }
 
@@ -88,11 +88,14 @@ function _initial_setup() {
   # All of these certs support both FQDNs (`mail.example.test` and `example.test`),
   # Except for the wildcard cert (`*.example.test`), that was created with `example.test` intentionally excluded from SAN.
   # We want to maintain the same FQDN (`mail.example.test`) between the _acme_ecdsa and _acme_rsa tests.
-  local LOCAL_BASE_PATH="${PWD}/test/test-files/ssl/example.test/with_ca/rsa"
+  local LOCAL_BASE_PATH="${PWD}/test/files/ssl/example.test/with_ca/rsa"
 
   function _prepare() {
     # Default `acme.json` for _acme_ecdsa test:
     cp "${LOCAL_BASE_PATH}/ecdsa.acme.json" "${TEST_TMP_CONFIG}/letsencrypt/acme.json"
+    cat >"${TEST_TMP_CONFIG}/postfix-main.cf" <<'EOF'
+tls_high_cipherlist = ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES256-GCM-SHA384
+EOF
 
     # TODO: Provision wildcard certs via Traefik to inspect if `example.test` non-wildcard is also added to the cert.
     local CUSTOM_SETUP_ARGUMENTS=(
@@ -123,6 +126,7 @@ function _initial_setup() {
   # It should replace the cert files in the existing `letsencrypt/live/mail.example.test/` folder.
   function _acme_rsa() {
     _should_extract_on_changes 'mail.example.test' "${LOCAL_BASE_PATH}/rsa.acme.json"
+    _should_have_custom_tls_cipherlist
 
     local RSA_KEY_PATH="${LOCAL_BASE_PATH}/key.rsa.pem"
     local RSA_CERT_PATH="${LOCAL_BASE_PATH}/cert.rsa.pem"
@@ -148,7 +152,7 @@ function _initial_setup() {
     # The difference in support is:
     # - `example.test` should no longer be valid.
     # - `mail.example.test` should remain valid, but also allow any other subdomain/hostname.
-    _should_succesfully_negotiate_tls 'mail.example.test'
+    _should_successfully_negotiate_tls 'mail.example.test'
     _should_support_fqdn_in_cert 'fake.example.test'
     _should_not_support_fqdn_in_cert 'example.test'
   }
@@ -173,9 +177,8 @@ function _should_have_valid_config() {
   local LE_CERT_PATH="/etc/letsencrypt/live/${EXPECTED_FQDN}/${3}"
 
   _has_matching_line 'postconf' "smtpd_tls_chain_files = ${LE_KEY_PATH} ${LE_CERT_PATH}"
-  _has_matching_line 'doveconf' "ssl_cert = <${LE_CERT_PATH}"
-  # `-P` is required to prevent redacting secrets
-  _has_matching_line 'doveconf -P' "ssl_key = <${LE_KEY_PATH}"
+  _has_matching_line 'doveconf ssl_server' "  cert_file = ${LE_CERT_PATH}"
+  _has_matching_line 'doveconf ssl_server' "  key_file = ${LE_KEY_PATH}"
 }
 
 # CMD ${1} run in container with output checked to match value of ${2}:
@@ -227,6 +230,13 @@ function _should_have_expected_files() {
   _should_be_equal_in_content "${LE_CERT_PATH}" "${EXPECTED_CERT_PATH}"
 }
 
+function _should_have_custom_tls_cipherlist() {
+  local EXPECTED='tls_high_cipherlist = ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES256-GCM-SHA384'
+
+  _run_in_container postconf tls_high_cipherlist
+  assert_output "${EXPECTED}"
+}
+
 #
 # Misc
 #
@@ -240,8 +250,7 @@ function _copy_to_letsencrypt_storage() {
   FQDN_DIR=$(echo "${DEST}" | cut -d '/' -f1)
   mkdir -p "${TEST_TMP_CONFIG}/letsencrypt/${FQDN_DIR}"
 
-  if ! cp "${PWD}/test/test-files/ssl/${SRC}" "${TEST_TMP_CONFIG}/letsencrypt/${DEST}"
-  then
+  if ! cp "${PWD}/test/files/ssl/${SRC}" "${TEST_TMP_CONFIG}/letsencrypt/${DEST}"; then
     echo "Could not copy cert file '${SRC}'' to '${DEST}'" >&2
     exit 1
   fi

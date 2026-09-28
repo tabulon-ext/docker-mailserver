@@ -6,14 +6,14 @@ There are multiple options to enable SSL (via [`SSL_TYPE`][docs-env::ssl-type]):
 
 - Using [letsencrypt](#lets-encrypt-recommended) (recommended)
 - Using [Caddy](#caddy)
-- Using [Traefik](#traefik-v2)
+- Using [Traefik](#traefik)
 - Using [self-signed certificates](#self-signed-certificates)
 - Using [your own certificates](#bring-your-own-certificates)
 
 After installation, you can test your setup with:
 
 - [`checktls.com`](https://www.checktls.com/TestReceiver)
-- [`testssl.sh`](https://github.com/drwetter/testssl.sh)
+- [`testssl.sh`](https://github.com/testssl/testssl.sh)
 
 !!! warning "Exposure of DNS labels through Certificate Transparency"
 
@@ -25,53 +25,39 @@ After installation, you can test your setup with:
 
 ## The FQDN
 
-An [FQDN](https://en.wikipedia.org/wiki/Fully_qualified_domain_name) (_Fully Qualified Domain Name_) such as `mail.example.com` is required for `docker-mailserver` to function correctly, especially for looking up the correct SSL certificate to use.
+An [FQDN](https://en.wikipedia.org/wiki/Fully_qualified_domain_name) (_Fully Qualified Domain Name_) such as `mail.example.com` is required for DMS to function correctly, especially for looking up the correct SSL certificate to use.
 
-Internally, `hostname -f` will be used to retrieve the FQDN as configured in the below examples.
+- `mail.example.com` will still use `user@example.com` as the mail address. You do not need a bare domain for that.
+- We usually discourage assigning a bare domain (_When your DNS MX record does not point to a subdomain_) to represent DMS. However, an FQDN of [just `example.com` is also supported][docs-faq-baredomain].
+- Internally, `hostname -f` will be used to retrieve the FQDN as configured in the below examples.
+- Wildcard certificates (eg: `*.example.com`) are supported for `SSL_TYPE=letsencrypt`. Your configured FQDN below may be `mail.example.com`, and your wildcard certificate provisioned to `/etc/letsencrypt/live/example.com` which will be checked as a fallback FQDN by DMS.
 
-Wildcard certificates (eg: `*.example.com`) are supported for `SSL_TYPE=letsencrypt`. Your configured FQDN below may be `mail.example.com`, and your wildcard certificate provisioned to `/etc/letsencrypt/live/example.com` which will be checked as a fallback FQDN by `docker-mailserver`.
+!!! example "Setting the hostname correctly"
 
-!!! example "Docker CLI options `--hostname` and optionally `--domainname`"
+    Change `mail.example.com` below to your own FQDN.
 
     ```sh
-    docker run --hostname mail --domainname example.com
-    # `--domainname` is not required:
+    # CLI:
     docker run --hostname mail.example.com
     ```
 
-!!! example "`docker-compose.yml` config"
+    or
 
     ```yml
-    services:
-      mailserver:
-        hostname: mail
-        domainname: example.com
-    # `domainname` is not required:
+    # compose.yaml
     services:
       mailserver:
         hostname: mail.example.com
-    ```
-
-!!! example "_Bare domains_ (eg: `example.com`) should only use the hostname option"
-
-    ```sh
-    docker run --hostname example.com
-    ```
-
-    ```yml
-    services:
-      mailserver:
-        hostname: example.com
     ```
 
 ## Provisioning methods
 
 ### Let's Encrypt (Recommended)
 
-To enable _Let's Encrypt_ for `docker-mailserver`, you have to:
+To enable _Let's Encrypt_ for DMS, you have to:
 
 1. Get your certificate using the _Let's Encrypt_ client [Certbot][certbot::github].
-2. For your `docker-mailserver` container:
+2. For your DMS container:
 
     - Add the environment variable `SSL_TYPE=letsencrypt`.
     - Mount [your local `letsencrypt` folder][certbot::certs-storage] as a volume to `/etc/letsencrypt`.
@@ -82,18 +68,16 @@ You don't have to do anything else. Enjoy!
 
     `/etc/letsencrypt/live` stores provisioned certificates in individual folders named by their FQDN.
 
-    Make sure that the entire folder is mounted to `docker-mailserver` as there are typically symlinks from `/etc/letsencrypt/live/mail.example.com` to `/etc/letsencrypt/archive`.
+    Make sure that the entire folder is mounted to DMS as there are typically symlinks from `/etc/letsencrypt/live/mail.example.com` to `/etc/letsencrypt/archive`.
 
 !!! example
 
-    Add these additions to the `mailserver` service in your [`docker-compose.yml`][github-file-compose]:
+    Add these additions to the `mailserver` service in your [`compose.yaml`][github-file-compose]:
 
     ```yaml
     services:
       mailserver:
-        # For the FQDN 'mail.example.com':
-        hostname: mail
-        domainname: example.com
+        hostname: mail.example.com
         environment:
           - SSL_TYPE=letsencrypt
         volumes:
@@ -102,12 +86,11 @@ You don't have to do anything else. Enjoy!
 
 #### Example using Docker for _Let's Encrypt_ { data-toc-label='Certbot with Docker' }
 
-Certbot provisions certificates to `/etc/letsencrypt`. Add a volume to store these, so that they can later be accessed by `docker-mailserver` container. You may also want to persist Certbot [logs][certbot::log-rotation], just in case you need to troubleshoot.
+Certbot provisions certificates to `/etc/letsencrypt`. Add a volume to store these, so that they can later be accessed by DMS container. You may also want to persist Certbot [logs][certbot::log-rotation], just in case you need to troubleshoot.
 
 1. Getting a certificate is this simple! (_Referencing: [Certbot docker instructions][certbot::docker] and [`certonly --standalone` mode][certbot::standalone]_):
 
     ```sh
-    # Change `mail.example.com` below to your own FQDN.
     # Requires access to port 80 from the internet, adjust your firewall if needed.
     docker run --rm -it \
       -v "${PWD}/docker-data/certbot/certs/:/etc/letsencrypt/" \
@@ -116,18 +99,16 @@ Certbot provisions certificates to `/etc/letsencrypt`. Add a volume to store the
       certbot/certbot certonly --standalone -d mail.example.com
     ```
 
-2. Add a volume for `docker-mailserver` that maps the _local `certbot/certs/` folder_ to the container path `/etc/letsencrypt/`.
+2. Add a volume for DMS that maps the _local `certbot/certs/` folder_ to the container path `/etc/letsencrypt/`.
 
     !!! example
 
-        Add these additions to the `mailserver` service in your [`docker-compose.yml`][github-file-compose]:
-    
+        Add these additions to the `mailserver` service in your [`compose.yaml`][github-file-compose]:
+
         ```yaml
         services:
           mailserver:
-            # For the FQDN 'mail.example.com':
-            hostname: mail
-            domainname: example.com
+            hostname: mail.example.com
             environment:
               - SSL_TYPE=letsencrypt
             volumes:
@@ -153,6 +134,7 @@ Certbot provisions certificates to `/etc/letsencrypt`. Add a volume to store the
     ```
 
     This process can also be [automated via _cron_ or _systemd timers_][certbot::automated-renewal].
+    - [Example with a systemd timer][certbot::automated-renewal::example-systemd-timer]
 
 !!! note "Using a different ACME CA"
 
@@ -169,7 +151,7 @@ Obtain a Cloudflare API token:
 3. Click "Create Token", and choose the `Edit zone DNS` template (_Certbot [requires the `ZONE:DNS:Edit` permission](https://certbot-dns-cloudflare.readthedocs.io/en/stable/#credentials)_).
 
     !!! warning "Only include the necessary Zone resource configuration"
-    
+
         Be sure to configure "Zone Resources" section on this page to `Include -> Specific zone -> <your zone here>`.
 
         This restricts the API token to only this zone (domain) which is an important security measure.
@@ -180,9 +162,10 @@ Obtain a Cloudflare API token:
     dns_cloudflare_api_token = YOUR_CLOUDFLARE_TOKEN_HERE
     ```
 
-   - As this is sensitive data, you should restrict access to it with `chmod 600` and `chown 0:0`.
-   - Store the file in a folder if you like, such as `docker-data/certbot/secrets/`.
-5. Your `docker-compose.yml` should include the following:
+    - As this is sensitive data, you should restrict access to it with `chmod 600` and `chown 0:0`.
+    - Store the file in a folder if you like, such as `docker-data/certbot/secrets/`.
+
+5. Your `compose.yaml` should include the following:
 
     ```yaml
     services:
@@ -191,7 +174,7 @@ Obtain a Cloudflare API token:
           # Set SSL certificate type.
           - SSL_TYPE=letsencrypt
         volumes:
-          # Mount the cert folder generated by Certbot into mail-server:
+          # Mount the cert folder generated by Certbot:
           - ./docker-data/certbot/certs/:/etc/letsencrypt/:ro
 
       certbot-cloudflare:
@@ -225,7 +208,7 @@ Obtain a Cloudflare API token:
 6. Run the service to provision a certificate:
 
     ```sh
-    docker-compose run certbot-cloudflare
+    docker compose run certbot-cloudflare
     ```
 
 7. You should see the following log output:
@@ -239,7 +222,7 @@ Obtain a Cloudflare API token:
     This certificate expires on YYYY-MM-DD.
     These files will be updated when the certificate renews.
     NEXT STEPS:
-    - The certificate will need to be renewed before it expires. Certbot can automatically renew the certificate in background, but you may need to take steps to enable that functionality. See https://certbot.org/renewal structions.
+    - The certificate will need to be renewed before it expires. Certbot can automatically renew the certificate in background, but you may need to take steps to enable that functionality. See https://certbot.org/renewal instructions.
     ```
 
 After completing the steps above, your certificate should be ready to use.
@@ -248,7 +231,7 @@ After completing the steps above, your certificate should be ready to use.
 
     We've only demonstrated how to provision a certificate, but it will expire in 90 days and need to be renewed before then.
 
-    In the following example, add a new service (`certbot-cloudflare-renew`) into `docker-compose.yml` that will handle certificate renewals:
+    In the following example, add a new service (`certbot-cloudflare-renew`) into `compose.yaml` that will handle certificate renewals:
 
     ```yml
     services:
@@ -256,7 +239,7 @@ After completing the steps above, your certificate should be ready to use.
         image: certbot/dns-cloudflare:latest
         command: renew --dns-cloudflare --dns-cloudflare-credentials /run/secrets/cloudflare-api-token
         volumes:
-          - ./docker-data/certbot/certs/:/etc/letsencrtypt/
+          - ./docker-data/certbot/certs/:/etc/letsencrypt/
           - ./docker-data/certbot/logs/:/var/log/letsencrypt/
         secrets:
           - cloudflare-api-token
@@ -264,9 +247,9 @@ After completing the steps above, your certificate should be ready to use.
     ```
 
     You can manually run this service to renew the cert within 90 days:
-    
+
     ```sh
-    docker-compose run certbot-cloudflare-renew
+    docker compose run certbot-cloudflare-renew
     ```
 
     You should see the following output
@@ -274,14 +257,14 @@ After completing the steps above, your certificate should be ready to use.
 
     ```log
     Saving debug log to /var/log/letsencrypt/letsencrypt.log
-    
+
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Processing /etc/letsencrypt/renewal/mail.example.com.conf
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Account registered.
     Simulating renewal of an existing certificate for mail.example.com
     Waiting 10 seconds for DNS changes to propagate
-    
+
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Congratulations, all simulated renewals succeeded:
       /etc/letsencrypt/live/mail.example.com/fullchain.pem (success)
@@ -292,14 +275,14 @@ After completing the steps above, your certificate should be ready to use.
     (`crontab` example: Checks every day if the certificate should be renewed)
 
     ```sh
-    0 0 * * * docker-compose -f PATH_TO_YOUR_DOCKER_COMPOSE_YML up certbot-cloudflare-renew
+    0 0 * * * docker compose -f PATH_TO_YOUR_DOCKER_COMPOSE_YML up certbot-cloudflare-renew
     ```
 
 #### Example using `nginx-proxy` and `acme-companion` with Docker { data-toc-label='nginx-proxy with Docker' }
 
 If you are running a web server already, port 80 will be in use which Certbot requires. You could use the [Certbot `--webroot`][certbot::webroot] feature, but it is more common to leverage a _reverse proxy_ that manages the provisioning and renewal of certificates for your services automatically.
 
-In the following example, we show how `docker-mailserver` can be run alongside the docker containers [`nginx-proxy`][nginx-proxy::github] and [`acme-companion`][acme-companion::github] (_Referencing: [`acme-companion` documentation][acme-companion::docs]_):
+In the following example, we show how DMS can be run alongside the docker containers [`nginx-proxy`][nginx-proxy::github] and [`acme-companion`][acme-companion::github] (_Referencing: [`acme-companion` documentation][acme-companion::docs]_):
 
 1. Start the _reverse proxy_ (`nginx-proxy`):
 
@@ -333,7 +316,7 @@ In the following example, we show how `docker-mailserver` can be run alongside t
 
 3. Start the rest of your web server containers as usual.
 
-4. Start a _dummy container_ to provision certificates for your FQDN (eg: `mail.example.com`). `acme-companion` will detect the container and generate a _Let's Encrypt_ certificate for your domain, which can be used by `docker-mailserver`:
+4. Start a _dummy container_ to provision certificates for your FQDN (eg: `mail.example.com`). `acme-companion` will detect the container and generate a _Let's Encrypt_ certificate for your domain, which can be used by DMS:
 
     ```sh
     docker run --detach \
@@ -346,7 +329,7 @@ In the following example, we show how `docker-mailserver` can be run alongside t
 
     You may want to add `--env LETSENCRYPT_TEST=true` to the above while testing, to avoid the _Let's Encrypt_ certificate generation rate limits.
 
-5. Make sure your mount path to the `letsencrypt` certificates directory is correct. Edit your `docker-compose.yml` for the `mailserver` service to have volumes added like below:
+5. Make sure your mount path to the `letsencrypt` certificates directory is correct. Edit your `compose.yaml` for the `mailserver` service to have volumes added like below:
 
     ```yaml
     volumes:
@@ -356,18 +339,17 @@ In the following example, we show how `docker-mailserver` can be run alongside t
       - ./docker-data/acme-companion/certs/:/etc/letsencrypt/live/:ro
     ```
 
-6. Then from the `docker-compose.yml` project directory, run: `docker-compose up -d mailserver`.
+6. Then from the `compose.yaml` project directory, run: `docker compose up -d mailserver`.
 
 #### Example using `nginx-proxy` and `acme-companion` with `docker-compose` { data-toc-label='nginx-proxy with docker-compose' }
 
-The following example is the [basic setup][acme-companion::basic-setup] you need for using `nginx-proxy` and `acme-companion` with `docker-mailserver` (_Referencing: [`acme-companion` documentation][acme-companion::docs]_):
+The following example is the [basic setup][acme-companion::basic-setup] you need for using `nginx-proxy` and `acme-companion` with DMS (_Referencing: [`acme-companion` documentation][acme-companion::docs]_):
 
-???+ example "Example: `docker-compose.yml`"
+???+ example "Example: `compose.yaml`"
 
-    You should have an existing `docker-compose.yml` with a `mailserver` service. Below are the modifications to add for integrating with `nginx-proxy` and `acme-companion` services:
+    You should have an existing `compose.yaml` with a `mailserver` service. Below are the modifications to add for integrating with `nginx-proxy` and `acme-companion` services:
 
     ```yaml
-    version: '3.8'
     services:
       # Add the following `environment` and `volumes` to your existing `mailserver` service:
       mailserver:
@@ -395,19 +377,17 @@ The following example is the [basic setup][acme-companion::basic-setup] you need
         volumes:
           # `certs/`:      Managed by the `acme-companion` container (_read-only_).
           # `docker.sock`: Required to interact with containers via the Docker API.
-          # `dhparam`:     A named data volume to prevent `nginx-proxy` creating an anonymous volume each time.
           - ./docker-data/nginx-proxy/html/:/usr/share/nginx/html/
           - ./docker-data/nginx-proxy/vhost.d/:/etc/nginx/vhost.d/
           - ./docker-data/acme-companion/certs/:/etc/nginx/certs/:ro
           - /var/run/docker.sock:/tmp/docker.sock:ro
-          - dhparam:/etc/nginx/dhparam
 
       acme-companion:
         image: nginxproxy/acme-companion
         container_name: nginx-proxy-acme
         restart: always
         environment:
-          # Only docker-compose v2 supports: `volumes_from: [nginx-proxy]`,
+          # When `volumes_from: [nginx-proxy]` is not supported,
           # reference the _reverse-proxy_ `container_name` here:
           - NGINX_PROXY_CONTAINER=nginx-proxy
         volumes:
@@ -421,12 +401,6 @@ The following example is the [basic setup][acme-companion::basic-setup] you need
           - ./docker-data/acme-companion/certs/:/etc/nginx/certs/:rw
           - ./docker-data/acme-companion/acme-state/:/etc/acme.sh/
           - /var/run/docker.sock:/var/run/docker.sock:ro
-
-    # Once `nginx-proxy` fixes their Dockerfile, this named data volume can be removed from docs.
-    # Users can opt for a local bind mount volume like all others if they prefer, but this volume
-    # is only intended to be temporary.
-    volumes:
-      dhparam:
     ```
 
 !!! tip "Optional ENV vars worth knowing about"
@@ -435,12 +409,12 @@ The following example is the [basic setup][acme-companion::basic-setup] you need
 
     - `LETSENCRYPT_TEST=true`: _Recommended during initial setup_. Otherwise the default production endpoint has a [rate limit of 5 duplicate certificates per week][letsencrypt::limits]. Overrides `ACME_CA_URI` to use the _Let's Encrypt_ staging endpoint.
     - `LETSENCRYPT_EMAIL`: For when you don't use `DEFAULT_EMAIL` on `acme-companion`, or want to assign a different email contact for this container.
-    - `LETSENCRYPT_KEYSIZE`: Allows you to configure the type (RSA or ECDSA) and size of the private key for your certificate. Default is RSA 4096.
+    - `LETSENCRYPT_KEYSIZE`: Allows you to configure the type (RSA or ECDSA) and size of the private key for your certificate. Default is RSA 4096, but RSA 2048 is recommended.
     - `LETSENCRYPT_RESTART_CONTAINER=true`: When the certificate is renewed, the entire container will be restarted to ensure the new certificate is used.
 
     [`acme-companion` ENV for default settings][acme-companion::env-config] that apply to all containers using `LETSENCRYPT_HOST`:
 
-    - `DEFAULT_EMAIL`: An email address that the CA (_eg: Let's Encrypt_) can contact you about expiring certificates, failed renewals, or for account recovery. You may want to use an email address not handled by your mail-server to ensure deliverability in the event your mail-server breaks.
+    - `DEFAULT_EMAIL`: An email address that the CA (_eg: Let's Encrypt_) can contact you about expiring certificates, failed renewals, or for account recovery. You may want to use an email address not handled by your mail server to ensure deliverability in the event your mail server breaks.
     - `CERTS_UPDATE_INTERVAL`: If you need to adjust the frequency to check for renewals. 3600 seconds (1 hour) by default.
     - `DEBUG=1`: Should be helpful when [troubleshooting provisioning issues][acme-companion::troubleshooting] from `acme-companion` logs.
     - `ACME_CA_URI`: Useful in combination with `CA_BUNDLE` to use a private CA. To change the default _Let's Encrypt_ endpoint to the staging endpoint, use `https://acme-staging-v02.api.letsencrypt.org/directory`.
@@ -477,8 +451,8 @@ The following example is the [basic setup][acme-companion::basic-setup] you need
     # Optional variables:
     LETSENCRYPT_mail_TEST=true
     LETSENCRYPT_mail_EMAIL='admin@example.com'
-    # RSA-4096 => `4096`, ECDSA-256 => `ec-256`:
-    LETSENCRYPT_mail_KEYSIZE=4096
+    # Supported values are `2048`, `3072` and `4096` for RSA keys, and `ec-256` or `ec-384` for elliptic curve keys.
+    LETSENCRYPT_mail_KEYSIZE=2048
     ```
 
     Unlike with the equivalent ENV for containers, [changes to this file will **not** be detected automatically][acme-companion::standalone-changes]. You would need to wait until the next renewal check by `acme-companion` (_every hour by default_), restart `acme-companion`, or [manually invoke the _service loop_][acme-companion::service-loop]:
@@ -489,13 +463,11 @@ The following example is the [basic setup][acme-companion::basic-setup] you need
 
 Version 6.2 and later of the Synology NAS DSM OS now come with an interface to generate and renew letencrypt certificates. Navigation into your DSM control panel and go to Security, then click on the tab Certificate to generate and manage letsencrypt certificates.
 
-Amongst other things, you can use these to secure your mail-server. DSM locates the generated certificates in a folder below `/usr/syno/etc/certificate/_archive/`.
+Amongst other things, you can use these to secure your mail server. DSM locates the generated certificates in a folder below `/usr/syno/etc/certificate/_archive/`.
 
-Navigate to that folder and note the 6 character random folder name of the certificate you'd like to use. Then, add the following to your `docker-compose.yml` declaration file:
+Navigate to that folder and note the 6 character random folder name of the certificate you'd like to use. Then, add the following to your `compose.yaml` declaration file:
 
 ```yaml
-# Note: If you have an existing setup that was working pre docker-mailserver v10.2,
-# '/tmp/dms/custom-certs' below has replaced the previous '/tmp/ssl' container path.
 volumes:
   - /usr/syno/etc/certificate/_archive/<your-folder>/:/tmp/dms/custom-certs/
 environment:
@@ -508,144 +480,142 @@ DSM-generated letsencrypt certificates get auto-renewed every three months.
 
 ### Caddy
 
-If you are using Caddy to renew your certificates, please note that only RSA certificates work. Read [#1440][github-issue-1440] for details. In short for Caddy v1 the `Caddyfile` should look something like:
+[Caddy][web::caddy] is an open-source web server with built-in TLS certificate generation. You can use the [official Docker image][dockerhub::caddy] and write your own `Caddyfile`.
 
-```caddyfile
-https://mail.example.com {
-  tls admin@example.com {
-    key_type rsa2048
-  }
-}
-```
+!!! example
 
-For Caddy v2 you can specify the `key_type` in your server's global settings, which would end up looking something like this if you're using a `Caddyfile`:
+    While DMS does not need a webserver to work, this workaround will provision a TLS certificate for DMS to use by adding a dummy site block to trigger cert provisioning.
 
-```caddyfile
-{
-  debug
-  admin localhost:2019
-  http_port 80
-  https_port 443
-  default_sni example.com
-  key_type rsa4096
-}
-```
+    ```yaml title="compose.yaml"
+    services:
+      # Basic Caddy service to provision certs:
+      reverse-proxy:
+        image: caddy:2.7
+        ports:
+          - 80:80
+          - 443:443
+        volumes:
+          - ./Caddyfile:/etc/caddy/Caddyfile:ro
+          - ${CADDY_DATA_DIR}:/data
 
-If you are instead using a json config for Caddy v2, you can set it in your site's TLS automation policies:
+      # Share the Caddy data volume for certs and configure SSL_TYPE to `letsencrypt`
+      mailserver:
+        image: ghcr.io/docker-mailserver/docker-mailserver:latest
+        hostname: mail.example.com
+        environment:
+          SSL_TYPE: letsencrypt
+        # While you could use a named data volume instead of a bind mount volume, it would require the long-syntax to rename cert files:
+        # https://docs.docker.com/compose/compose-file/05-services/#volumes
+        volumes:
+          - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/mail.example.com.crt:/etc/letsencrypt/live/mail.example.com/fullchain.pem
+          - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/mail.example.com.key:/etc/letsencrypt/live/mail.example.com/privkey.pem
+    ```
 
-???+ example "Example Code"
+    An explicit entry in your `Caddyfile` config will have Caddy provision and renew a certificate for your DMS FQDN:
 
-    ```json
-    {
-      "apps": {
-        "http": {
-          "servers": {
-            "srv0": {
-              "listen": [
-                ":443"
-              ],
-              "routes": [
-                {
-                  "match": [
-                    {
-                      "host": [
-                        "mail.example.com",
-                      ]
-                    }
-                  ],
-                  "handle": [
-                    {
-                      "handler": "subroute",
-                      "routes": [
-                        {
-                          "handle": [
-                            {
-                              "body": "",
-                              "handler": "static_response"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ],
-                  "terminal": true
-                },
-              ]
-            }
-          }
-        },
-        "tls": {
-          "automation": {
-            "policies": [
-              {
-                "subjects": [
-                  "mail.example.com",
-                ],
-                "key_type": "rsa2048",
-                "issuer": {
-                  "email": "admin@example.com",
-                  "module": "acme"
-                }
-              },
-              {
-                "issuer": {
-                  "email": "admin@example.com",
-                  "module": "acme"
-                }
-              }
-            ]
-          }
-        }
+    ```caddyfile title="Caddyfile"
+    mail.example.com {
+      # Optionally provision RSA 2048-bit certificate instead of ECDSA P-256:
+      tls {
+        key_type rsa2048
       }
+
+      # Optional, can be useful for troubleshooting
+      # connection to Caddy with correct certificate:
+      respond "Hello DMS"
     }
     ```
 
-The generated certificates can be mounted:
+    !!! info
 
-```yaml
-volumes:
-  - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/mail.example.com.crt:/etc/letsencrypt/live/mail.example.com/fullchain.pem
-  - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/mail.example.com.key:/etc/letsencrypt/live/mail.example.com/privkey.pem
-```
+        An explicit `tls` directive affects only the site-address block it's used in:
 
-EC certificates fail in the TLS handshake:
+        - Use [`tls internal { ... }`][caddy-docs::tls-internal] if wanting to create a local self-signed cert, which may be useful for testing. This allows opt-in to use self-signed certs unlike the global `local_certs` option.
+        - [`key_type`][caddy-docs::key-type] can be used in the `tls` block if you need to enforce RSA as the key type for certificates provisioned. The default is currently ECDSA (P-256). This may improve compatibility with legacy clients.
 
-```log
-CONNECTED(00000003)
-140342221178112:error:14094410:SSL routines:ssl3_read_bytes:sslv3 alert handshake failure:ssl/record/rec_layer_s3.c:1543:SSL alert number 40
-no peer certificate available
-No client certificate CA names sent
-```
+??? example "With `caddy-docker-proxy`"
 
-### Traefik v2
+    Using [`lucaslorentz/caddy-docker-proxy`][github::caddy-docker-proxy] allows you to generate a `Caddyfile` by adding labels to your services in `compose.yaml`:
 
-[Traefik][traefik::github] is an open-source application proxy using the [ACME protocol][ietf::rfc::acme]. [Traefik][traefik::github] can request certificates for domains and subdomains, and it will take care of renewals, challenge negotiations, etc. We strongly recommend to use [Traefik][traefik::github]'s major version 2.
+    ```yaml title="compose.yaml"
+    services:
+      reverse-proxy:
+        image: lucaslorentz/caddy-docker-proxy:2.8
+        ports:
+          - 80:80
+          - 443:443
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+          - ${CADDY_DATA_DIR}:/data
+        labels:
+          # Set global config here, this option has an empty value to enable self-signed certs for local testing:
+          # NOTE: Remove this label when going to production.
+          caddy.local_certs: ""
 
-[Traefik][traefik::github]'s storage format is natively supported if the `acme.json` store is mounted into the container at `/etc/letsencrypt/acme.json`. The file is also monitored for changes and will trigger a reload of the mail services (Postfix and Dovecot).
+      # Use labels to configure Caddy to provision DMS certs
+      mailserver:
+        image: ghcr.io/docker-mailserver/docker-mailserver:latest
+        hostname: mail.example.com
+        environment:
+          SSL_TYPE: letsencrypt
+        volumes:
+          - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/mail.example.com.crt:/etc/letsencrypt/live/mail.example.com/fullchain.pem
+          - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/mail.example.com.key:/etc/letsencrypt/live/mail.example.com/privkey.pem
+        labels:
+          # Set your DMS FQDN here to add the site-address into the generated Caddyfile:
+          caddy_0: mail.example.com
+          # Adding a dummy directive is required:
+          caddy_0.respond: "Hello DMS"
+          # Uncomment to make a proxy for Rspamd:
+          # caddy_1: rspamd.example.com
+          # caddy_1.reverse_proxy: "{{upstreams 11334}}"
+    ```
 
-Wildcard certificates are supported. If your FQDN is `mail.example.com` and your wildcard certificate is `*.example.com`, add the ENV: `#!bash SSL_DOMAIN=example.com`.
+!!! warning "Caddy certificate location varies"
 
-The mail-server will select it's certificate from `acme.json` checking these ENV for a matching FQDN (_in order of priority_):
+    The path contains the certificate provisioner used. This path may be different from the example above for you and may change over time when [multiple ACME provisioner services are used][dms-pr-feedback::caddy-provisioning-gotcha].
 
-1. `#!bash ${SSL_DOMAIN}`
-2. `#!bash ${HOSTNAME}`
-3. `#!bash ${DOMAINNAME}`
+    This can make the volume mounting for DMS to find the certificates non-deterministic, but you can [restrict provisioning to single service via the `acme_ca` setting][caddy::restrict-acme-provisioner].
 
-This setup only comes with one caveat: The domain has to be configured on another service for [Traefik][traefik::github] to actually request it from _Let's Encrypt_, i.e. [Traefik][traefik::github] will not issue a certificate without a service / router demanding it.
+    ---
 
-???+ example "Example Code"
-    Here is an example setup for [`docker-compose`](https://docs.docker.com/compose/):
+    **NOTE:** Bind mounting a file directly instead of a directory will mount by inode. If the file is updated at renewal and this modifies the inode on the host system, then the container will still point to the old certificate.
 
-    ```yaml
-    version: '3.8'
+    If this happens, consider using our manual TLS type instead:
+
+    ```yaml title="compose.yaml"
     services:
       mailserver:
-        image: docker.io/mailserver/docker-mailserver:latest
-        container_name: mailserver
-        hostname: mail
-        domainname: example.com
+        environment:
+          SSL_TYPE: manual
+          SSL_CERT_PATH: /srv/tls/mail.example.com/mail.example.com.crt
+          SSL_KEY_PATH: /srv/tls/mail.example.com/mail.example.com.key
         volumes:
-           - ./docker-data/traefik/acme.json:/etc/letsencrypt/acme.json:ro
+          - ${CADDY_DATA_DIR}/certificates/acme-v02.api.letsencrypt.org-directory/mail.example.com/:/srv/tls/mail.example.com/:ro
+    ```
+
+### Traefik
+
+[Traefik][traefik::github] is an open-source application proxy using the [ACME protocol][ietf::rfc::acme]. Traefik can request certificates for domains and subdomains, and it will take care of renewals, challenge negotiations, etc.
+
+Traefik's storage format is natively supported if the `acme.json` store is mounted into the container at `/etc/letsencrypt/acme.json`. The file is also monitored for changes and will trigger a reload of the mail services (Postfix and Dovecot).
+
+DMS will select it's certificate from `acme.json` prioritizing a match for the DMS FQDN (hostname), while also checking one DNS level up (_eg: `mail.example.com` => `example.com`_). Wildcard certificates are supported.
+
+This setup only comes with one caveat - The domain has to be configured on another service for Traefik to actually request it from _Let's Encrypt_ (_i.e. Traefik will not issue a certificate without a service / router demanding it_).
+
+???+ example "Example Code"
+
+    Here is an example setup for [`Docker Compose`](https://docs.docker.com/compose/):
+
+    ```yaml
+    services:
+      mailserver:
+        image: ghcr.io/docker-mailserver/docker-mailserver:latest
+        container_name: mailserver
+        hostname: mail.example.com
+        volumes:
+          - ./docker-data/traefik/acme.json:/etc/letsencrypt/acme.json:ro
         environment:
           SSL_TYPE: letsencrypt
           SSL_DOMAIN: mail.example.com
@@ -656,26 +626,26 @@ This setup only comes with one caveat: The domain has to be configured on anothe
         image: docker.io/traefik:latest #v2.5
         container_name: docker-traefik
         ports:
-           - "80:80"
-           - "443:443"
+          - "80:80"
+          - "443:443"
         command:
-           - --providers.docker
-           - --entrypoints.http.address=:80
-           - --entrypoints.http.http.redirections.entryPoint.to=https
-           - --entrypoints.http.http.redirections.entryPoint.scheme=https
-           - --entrypoints.https.address=:443
-           - --entrypoints.https.http.tls.certResolver=letsencrypt
-           - --certificatesresolvers.letsencrypt.acme.email=admin@example.com
-           - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
-           - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http
+          - --providers.docker
+          - --entrypoints.http.address=:80
+          - --entrypoints.http.http.redirections.entryPoint.to=https
+          - --entrypoints.http.http.redirections.entryPoint.scheme=https
+          - --entrypoints.https.address=:443
+          - --entrypoints.https.http.tls.certResolver=letsencrypt
+          - --certificatesresolvers.letsencrypt.acme.email=admin@example.com
+          - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+          - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http
         volumes:
-           - ./docker-data/traefik/acme.json:/acme.json
-           - /var/run/docker.sock:/var/run/docker.sock:ro
+          - ./docker-data/traefik/acme.json:/acme.json
+          - /var/run/docker.sock:/var/run/docker.sock:ro
 
       whoami:
         image: docker.io/traefik/whoami:latest
         labels:
-           - "traefik.http.routers.whoami.rule=Host(`mail.example.com`)"
+          - "traefik.http.routers.whoami.rule=Host(`mail.example.com`)"
     ```
 
 ### Self-Signed Certificates
@@ -684,23 +654,19 @@ This setup only comes with one caveat: The domain has to be configured on anothe
 
     Use self-signed certificates only for testing purposes!
 
-This feature requires you to provide the following files into your [`docker-data/dms/config/ssl/` directory][docs-optional-config] (_internal location: `/tmp/docker-mailserver/ssl/`_):
+This feature requires you to provide the following files into your [`docker-data/dms/config/ssl/` directory][docs::dms-volumes-config] (_internal location: `/tmp/docker-mailserver/ssl/`_):
 
 - `<FQDN>-key.pem`
 - `<FQDN>-cert.pem`
 - `demoCA/cacert.pem`
 
-Where `<FQDN>` is the FQDN you've configured for your `docker-mailserver` container.
+Where `<FQDN>` is the FQDN you've configured for your DMS container.
 
-Add `SSL_TYPE=self-signed` to your `docker-mailserver` environment variables. Postfix and Dovecot will be configured to use the provided certificate (_`.pem` files above_) during container startup.
+Add `SSL_TYPE=self-signed` to your DMS environment variables. Postfix and Dovecot will be configured to use the provided certificate (_`.pem` files above_) during container startup.
 
 #### Generating a self-signed certificate
 
-!!! note
-
-    Since `docker-mailserver` v10, support in `setup.sh` for generating a _self-signed SSL certificate_ internally was removed.
-
-One way to generate self-signed certificates is with [Smallstep's `step` CLI](https://smallstep.com/docs/step-cli). This is exactly what [`docker-mailserver` does for creating test certificates][github-file::tls-readme].
+One way to generate self-signed certificates is with [Smallstep's `step` CLI](https://smallstep.com/docs/step-cli). This is exactly what [DMS does for creating test certificates][github-file::tls-readme].
 
 For example with the FQDN `mail.example.test`, you can generate the required files by running:
 
@@ -744,7 +710,7 @@ docker run --rm -it \
 
 ### Bring Your Own Certificates
 
-You can also provide your own certificate files. Add these entries to your `docker-compose.yml`:
+You can also provide your own certificate files. Add these entries to your `compose.yaml`:
 
 ```yaml
 volumes:
@@ -764,11 +730,11 @@ The local and internal paths may be whatever you prefer, so long as both `SSL_CE
 
 !!! info
 
-    You may have to restart `docker-mailserver` once the certificates change.
+    You may have to restart DMS once the certificates change.
 
 ## Testing a Certificate is Valid
 
-- From your host:
+!!! example "Connect to DMS on port 25"
 
     ```sh
     docker exec mailserver openssl s_client \
@@ -777,26 +743,42 @@ The local and internal paths may be whatever you prefer, so long as both `SSL_CE
       -CApath /etc/ssl/certs/
     ```
 
-- Or:
+    The response should show the certificate chain with a line further down: `Verify return code: 0 (ok)`
+
+    ---
+
+    This example runs within the DMS container itself to verify the cert is working locally.
+
+    - Adjust the `-connect` IP if testing externally from another system. Additionally testing for port 143 (Dovecot IMAP) is encouraged (_change the protocol for `-starttls` from `smtp` to `imap`_).
+    - `-CApath` will help verify the certificate chain, provided the location contains the root CA that signed your TLS cert for DMS.
+
+??? example "Verify certificate dates"
 
     ```sh
     docker exec mailserver openssl s_client \
-      -connect 0.0.0.0:143 \
-      -starttls imap \
-      -CApath /etc/ssl/certs/
+      -connect 0.0.0.0:25 \
+      -starttls smtp \
+      -CApath /etc/ssl/certs/ \
+      2>/dev/null | openssl x509 -noout -dates
     ```
 
-And you should see the certificate chain, the server certificate and: `Verify return code: 0 (ok)`
+!!! tip "Testing and troubleshooting"
 
-In addition, to verify certificate dates:
+    If you need to test a connection without resolving DNS, `curl` can connect with `--resolve` option to map an FQDN + Port to an IP address, instead of the request address provided.
 
-```sh
-docker exec mailserver openssl s_client \
-  -connect 0.0.0.0:25 \
-  -starttls smtp \
-  -CApath /etc/ssl/certs/ \
-  2>/dev/null | openssl x509 -noout -dates
-```
+    ```bash
+    # NOTE: You may want to use `--insecure` if the cert was provisioned with a private CA not present on the curl client:
+    # Use `--verbose` for additional insights on the connection.
+    curl --resolve mail.example.com:443:127.0.0.1 https://mail.example.com
+    ```
+
+    Similarly with `openssl` you can connect to an IP as shown previously, but provide an explicit SNI if necessary with `-servername mail.example.com`.
+
+    ---
+
+    Both `curl` and `openssl` also support `-4` and `-6` for enforcing IPv4 or IPv6 lookup.
+
+    This can be useful, such as when [DNS resolves the IP to different servers leading to different certificates returned][dms-discussion::gotcha-fqdn-bad-dns]. As shown in that link, `step certificate inspect` is also handy for viewing details of the cert returned or on disk.
 
 ## Plain-Text Access
 
@@ -808,7 +790,7 @@ Add this to `docker-data/dms/config/dovecot.cf`:
 
 ```cf
 ssl = yes
-disable_plaintext_auth=no
+auth_allow_cleartext = yes
 ```
 
 These options in conjunction mean:
@@ -821,15 +803,13 @@ These options in conjunction mean:
 
 If you have another source for SSL/TLS certificates you can import them into the server via an external script. The external script can be found here: [external certificate import script][hanscees-renewcerts].
 
-!!! attention "Only compatible with `docker-mailserver` releases < `v10.2`"
+This is a community contributed script, and in most cases you will have better support via our _Change Detection_ service (_automatic for `SSL_TYPE` of `manual` and `letsencrypt`_) - Unless you're using LDAP which disables the service.
 
-    The script expects `/etc/postfix/ssl/cert` and `/etc/postfix/ssl/key` files to be configured paths for both Postfix and Dovecot to use.
+!!! warning "Script Compatibility"
 
-    Since the `docker-mailserver` 10.2 release, certificate files have moved to `/etc/dms/tls/`, and the file name may differ depending on provisioning method.
-
-    This third-party script also has `fullchain.pem` and `privkey.pem` as hard-coded, thus is incompatible with other filenames.
-
-    Additionally it has never supported handling `ALT` fallback certificates (for supporting dual/hybrid, RSA + ECDSA).
+    - Relies on private filepaths `/etc/dms/tls/cert` and `/etc/dms/tls/key` intended for internal use only.
+    - Only supports hard-coded `fullchain.key` + `privkey.pem` as your mounted file names. That may not align with your provisioning method.
+    - No support for `ALT` fallback certificates (_for supporting dual/hybrid, RSA + ECDSA_).
 
 The steps to follow are these:
 
@@ -864,7 +844,7 @@ export SITE_URL="mail.example.com"
 export SITE_IP_URL="192.168.0.72" # can also use `mail.example.com`
 export SITE_SSL_PORT="993" # imap port dovecot
 
-##works: check if certificate will expire in two weeks 
+##works: check if certificate will expire in two weeks
 #2 weeks is 1209600 seconds
 #3 weeks is 1814400
 #12 weeks is 7257600
@@ -892,7 +872,7 @@ You can of course run the script by cron once a week or something. In that way y
 ```sh
 # This script is run inside docker-mailserver via 'docker exec ...', using the 'mail' command to send alerts.
 ## code below will alert if certificate expires in less than two weeks
-## please adjust varables!
+## please adjust variables!
 ## make sure the 'mail -s' command works! Test!
 
 export SITE_URL="mail.example.com"
@@ -921,30 +901,171 @@ if [ "$certcheck_2weeks" = "Certificate will not expire" ]; then
     echo "Cert seems to be expiring pretty soon, within two weeks: $certcheck_2weeks"
     echo "we will send an alert email and log as well"
     logger Certwatch: cert $SITE_URL will expire in two weeks
-    echo "Certwatch: cert $SITE_URL will expire in two weeks" | mail -s "cert $SITE_URL expires in two weeks " $ALERT_EMAIL_ADDR 
+    echo "Certwatch: cert $SITE_URL will expire in two weeks" | mail -s "cert $SITE_URL expires in two weeks " $ALERT_EMAIL_ADDR
 fi
 ```
 
-## Custom DH Parameters
+## DMS - TLS (technical details)
 
-By default `docker-mailserver` uses [`ffdhe4096`][ffdhe4096-src] from [IETF RFC 7919][ietf::rfc::ffdhe]. These are standardized pre-defined DH groups and the only available DH groups for TLS 1.3. It is [discouraged to generate your own DH parameters][dh-avoid-selfgenerated] as it is often less secure.
+### Cipher suite support by `TLS_LEVEL`
 
-Despite this, if you must use non-standard DH parameters or you would like to swap `ffdhe4096` for a different group (eg `ffdhe2048`); Add your own PEM encoded DH params file via a volume to `/tmp/docker-mailserver/dhparams.pem`. This will replace DH params for both Dovecot and Postfix services during container startup.
+Both Postfix and Dovecot are configured with the following cipher lists depending on the [`TLS_LEVEL` ENV][docs-env::tls-level], which only affects the authenticated ports (_**SMTP:** 587 + 465 / **POP3:** 110 + 995 / **IMAP:** 143 + 993_):
+
+```sh
+# TLS_LEVEL=modern
+ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305
+
+# TLS_LEVEL=intermediate
+ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384
+```
+
+For clarity, the permitted [cipher suites][tls::cipher-suites] are comprised of the components:
+
+- **Key-Exchange:** ECDHE (_port 25 still offers DHE for opportunistic TLS with legacy MTAs_)
+- **Authentication:** RSA + ECDSA (_depending on the key type of your TLS certificate(s)_)
+- **Encryption:** AES-GCM + CHACHA20-POLY1305 + AES-CBC
+
+`TLS_LEVEL=intermediate` includes 4 additional cipher suites that leverage the AES-CBC encryption cipher. While the AES-CBC cipher in TLS 1.2 should be generally considered secure, it is [not AEAD][tls::cbc-not-aead] (_hence their exclusion from `TLS_LEVEL=modern`_).
+
+These are the additional cipher suites supported via `TLS_LEVEL=intermediate`, they use the `ECDHE` key-exchange algorithm (_which provides [perfect forward secrecy][tls::pfs]_):
+
+- **ECDSA:** `ECDHE-ECDSA-AES128-SHA256` + `ECDHE-ECDSA-AES256-SHA384`
+- **RSA:** `ECDHE-RSA-AES128-SHA256` + `ECDHE-RSA-AES256-SHA384`
+
+??? info "Cipher suite negotiation is via server preference"
+
+    The client sends a list of cipher suites it can support negotiating, and the server will compare that with it's own to decide which one to use. Choosing the first compatible cipher suite from the two lists can be configured to prefer the server or the clients cipher list.
+
+    ---
+
+    DMS defaults to server preference when negotiating TLS 1.2 (or lower when configured):
+
+    - **Postfix:** `tls_preempt_cipherlist = yes`
+    - **Dovecot:** `ssl_server_prefer_ciphers = server` (_Prior to DMS v16, the equivalent setting for Dovecot 2.3 was `ssl_prefer_server_ciphers = yes`_)
+
+    Server preference prioritizes cipher suites by these factors:
+
+    - Cipher: AEAD ciphers sorted by those most commonly supported, with their lower security level variant first (_128-bit symmetric security is incredibly secure already_). Any non-AEAD cipher suites would be appended to the list with the same sorting rules.
+
+    ---
+
+    Client preference should be ok to enable with the cipher lists configured by DMS.
+
+    - `TLS_LEVEL=modern` only offers cipher suites that use AEAD ciphers.
+    - `TLS_LEVEL=intermediate` additionally includes AES-CBC ciphers (non-AEAD) that are known to be secure (_but have historically had related cipher suites with a variety of vulnerabilities_).
+    - Port 25 has an even broader cipher list configured than `TLS_LEVEL=intermediate`, but have likewise been filtered to cipher suites that should be safe. As this port for public ingress is expected to not enforce TLS, there is less value controlling the cipherlist.
+
+    The main benefit from client preference is that the client can choose which cipher suite is most optimal / efficient for it to use (_Most commonly this would be for devices that would prefer a `CHACHA20-POLY1305` or `CCM` cipher_).
+
+### Using custom DH parameters
+
+DMS does not ship a DH parameters file. TLS 1.3 uses the RFC 7919 FFDHE groups built into the protocol. For TLS 1.2 DHE:
+
+- **Postfix:** `smtpd_tls_dh1024_param_file` is unset. [Since Postfix 3.7 + OpenSSL 3.0][tls-dh-postfix-3p7], Postfix still negotiates DHE cipher suites on port 25 by sourcing RFC 7919 FFDHE parameters from OpenSSL. The authenticated ports (`TLS_LEVEL`) no longer list DHE cipher suites, so this fallback does not apply there.
+- **Dovecot:** `ssl_server_dh_file` is unset. Dovecot has no equivalent fallback.
+
+To restore DHE on the authenticated ports, re-add the DHE cipher suites to the `TLS_LEVEL` cipher lists (_Postfix `tls_high_cipherlist` and Dovecot `ssl_cipher_list`_) and, for Dovecot, also set a DH parameters file. To pin Postfix (including port 25) to a specific group, provide a PEM encoded file from [IETF RFC 7919][ietf::rfc::ffdhe] (eg [`ffdhe4096`][ffdhe4096-src] or `ffdhe2048`). It is [discouraged to generate your own DH parameters][dh-avoid-selfgenerated].
+
+??? example "Custom DH params with `compose.yaml`"
+
+    1. Add your own PEM encoded DH parameters file via a volume into the DMS container at any path you prefer (eg: `/tmp/docker-mailserver/dh-params.pem`).
+    2. Update one or both service configs via our config override support ([Dovecot][docs::dms-override-config::dovecot], [Postfix][docs::dms-override-config::postfix]).
+
+    This example uses the Docker Compose `configs` feature, but you could also use standard `volumes` with separate files if you prefer.
+
+    ```yaml
+    services:
+      mailserver:
+        image: mailserver/docker-mailserver:latest
+        configs:
+          # During the first run of the DMS container instance, these overrides will update the internal `/etc/postfix/main.cf` and copy to `/etc/dovecot/local.cf`:
+          - source: postfix-overrides
+            target: /tmp/docker-mailserver/postfix-main.cf
+          - source: dovecot-overrides
+            target: /tmp/docker-mailserver/dovecot.cf
+          - source: dh-params-2048
+            target: /tmp/docker-mailserver/dh-params.pem
+
+    configs:
+      # NOTE: Postfix plans to remove support in future for setting custom DH parameters.
+      postfix-overrides:
+        content: |
+          smtpd_tls_dh1024_param_file = /tmp/docker-mailserver/dh-params.pem
+
+      # NOTE: The setting `ssl_server_dh_file` is for Dovecot 2.4 (DMS v16), it previously named `ssl_dh`.
+      dovecot-overrides:
+        content: |
+          ssl_server_dh_file = </tmp/docker-mailserver/dh-params.pem
+
+      # This would be your PEM encoded DH parameters file:
+      # https://datatracker.ietf.org/doc/html/rfc7919#appendix-A.1
+      # https://github.com/internetstandards/dhe_groups/blob/main/ffdhe2048.pem
+      dh-params-2048:
+        content: |-
+          -----BEGIN DH PARAMETERS-----
+          MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
+          +8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+          87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+          YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+          7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+          ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
+          -----END DH PARAMETERS-----
+    ```
+
+    ??? tip "When using Docker Compose `configs` - YAML syntax importance of using `content: |-`"
+        The `dh-params-2048` content above has YAML syntax of `|-` instead of `|`, this is not required but avoids adding a newline to the file content.
+
+        Thus avoiding an extra newline appended to the file content is important if you care to verify integrity:
+
+        ```console
+        $ curl -fsSL https://ssl-config.mozilla.org/ffdhe2048.txt | sha512sum | awk '{print $1}'
+        a29b3c9cd89f6126c2647084fc613b024c18cc03f4eac7c24ad942b175b659b0fa9c14e6bc43a7d76a46cbd47c81e30d8c020e08881035c78c55ec30437dce25
+
+        $ sha512sum /tmp/docker-mailserver/dh-params.pem | awk '{print $1}'
+        a29b3c9cd89f6126c2647084fc613b024c18cc03f4eac7c24ad942b175b659b0fa9c14e6bc43a7d76a46cbd47c81e30d8c020e08881035c78c55ec30437dce25
+        ```
+
+### DHE cipher suite support without DH parameters
+
+DMS leaves DH parameter files unset. Authenticated ports no longer list DHE cipher suites. Port 25 still offers them via Postfix's OpenSSL FFDHE fallback.
+
+??? abstract "Technical Details - Opt-out of DH parameters does not prevent offering DHE cipher suites"
+
+    The defaults for DH parameters since DMS v16 are:
+
+    - **Postfix:** `smtpd_tls_dh1024_param_file` is not set
+        - [Since Postfix 3.7 + OpenSSL 3.0][tls-dh-postfix-3p7] (from DMS v14 onwards), Postfix will continue to support negotiating DHE cipher suites for TLS 1.2 (or below) by sourcing RFC 7919 FFDHE parameters from OpenSSL.
+        - Prior to Postfix 3.7 if this setting were unset, Postfix would fallback to a 2048-bit FFDHE parameter file it shipped with internally.
+    - **Dovecot:** `ssl_server_dh_file` is not set (_Dovecot has no OpenSSL FFDHE fallback_)
+
+    When `ssl_server_dh_file` is unset, DHE cipher suites will still be offered to clients for negotiation if the Dovecot cipher list (`ssl_cipher_list`) includes any.
+    This misconfiguration [prevents affected clients from connecting over TLS][tls::dovecot-dhe-fail] and affects the accuracy of findings reported by tools like `testssl.sh`, as the connection failure does not provide adequate context to detect the issue properly.
+
+    To avoid this mishap with Dovecot configuration, ensure that the `ssl_cipher_list` setting value excludes DHE cipher suites (_the DMS `TLS_LEVEL` lists do this by omitting them; if you re-add DHE suites, also set `ssl_server_dh_file`_).
 
 [docs-env::ssl-type]: ../environment.md#ssl_type
-[docs-optional-config]: ../advanced/optional-config.md
+[docs-env::tls-level]: ../environment.md#tls_level
+[docs-faq-baredomain]: ../../faq.md#can-i-use-a-nakedbare-domain-ie-no-hostname
+[docs::dms-volumes-config]: ../advanced/optional-config.md#volumes-config
+[docs::dms-override-config::dovecot]: ../advanced/override-defaults/dovecot.md
+[docs::dms-override-config::postfix]: ../advanced/override-defaults/postfix.md
 
-[github-file-compose]: https://github.com/docker-mailserver/docker-mailserver/blob/master/docker-compose.yml
+[github-file-compose]: https://github.com/docker-mailserver/docker-mailserver/blob/master/compose.yaml
 [github-file::tls-readme]: https://github.com/docker-mailserver/docker-mailserver/blob/3b8059f2daca80d967635e04d8d81e9abb755a4d/test/test-files/ssl/example.test/README.md
-[github-issue-1440]: https://github.com/docker-mailserver/docker-mailserver/issues/1440
 [hanscees-renewcerts]: https://github.com/hanscees/dockerscripts/blob/master/scripts/tomav-renew-certs
 
 [traefik::github]: https://github.com/containous/traefik
 [ietf::rfc::acme]: https://datatracker.ietf.org/doc/html/rfc8555
 
+[tls::cipher-suites]: https://en.wikipedia.org/wiki/Cipher_suite#Supported_algorithms
+[tls::cbc-not-aead]: https://crypto.stackexchange.com/questions/52566/why-was-aes-cbc-removed-in-tls-1-3/52584#52584
+[tls::pfs]: https://en.wikipedia.org/wiki/Forward_secrecy
+[tls::dovecot-dhe-fail]: https://github.com/testssl/testssl.sh/issues/2883#issuecomment-3273014938
+
 [ietf::rfc::ffdhe]: https://datatracker.ietf.org/doc/html/rfc7919
 [ffdhe4096-src]: https://github.com/internetstandards/dhe_groups
 [dh-avoid-selfgenerated]: https://crypto.stackexchange.com/questions/29926/what-diffie-hellman-parameters-should-i-use
+[tls-dh-postfix-3p7]: https://www.postfix.org/postconf.5.html#smtpd_tls_dh1024_param_file
 
 [certificate-transparency]: https://certificate.transparency.dev/
 [ct-search]: https://crt.sh/
@@ -959,6 +1080,7 @@ Despite this, if you must use non-standard DH parameters or you would like to sw
 [certbot::standalone]: https://certbot.eff.org/docs/using.html#standalone
 [certbot::renew]: https://certbot.eff.org/docs/using.html#renewing-certificates
 [certbot::automated-renewal]: https://certbot.eff.org/docs/using.html#automated-renewals
+[certbot::automated-renewal::example-systemd-timer]: https://github.com/orgs/docker-mailserver/discussions/3917#discussioncomment-8661690
 [certbot::custom-ca]: https://certbot.eff.org/docs/using.htmlchanging-the-acme-server
 [certbot::webroot]: https://certbot.eff.org/docs/using.html#webroot
 
@@ -972,3 +1094,13 @@ Despite this, if you must use non-standard DH parameters or you would like to sw
 [acme-companion::standalone]: https://github.com/nginx-proxy/acme-companion/blob/main/docs/Standalone-certificates.md
 [acme-companion::standalone-changes]: https://github.com/nginx-proxy/acme-companion/blob/main/docs/Standalone-certificates.md#picking-up-changes-to-letsencrypt_user_data
 [acme-companion::service-loop]: https://github.com/nginx-proxy/acme-companion/blob/main/docs/Container-utilities.md
+
+[web::caddy]: https://caddyserver.com
+[dockerhub::caddy]: https://hub.docker.com/_/caddy
+[github::caddy-docker-proxy]: https://github.com/lucaslorentz/caddy-docker-proxy
+[dms-pr-feedback::caddy-provisioning-gotcha]: https://github.com/docker-mailserver/docker-mailserver/pull/3485/files#r1297512818
+[caddy-docs::tls-internal]: https://caddyserver.com/docs/caddyfile/directives/tls#syntax
+[caddy-docs::key-type]: https://caddyserver.com/docs/caddyfile/options#key-type
+[caddy::restrict-acme-provisioner]: https://caddy.community/t/is-there-a-way-on-a-caddyfile-to-force-a-specific-acme-ca/14506
+
+[dms-discussion::gotcha-fqdn-bad-dns]: https://github.com/docker-mailserver/docker-mailserver/issues/3955#issuecomment-2027882633
