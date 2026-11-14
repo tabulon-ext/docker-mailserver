@@ -9,7 +9,7 @@ function setup_file() {
 
   local CUSTOM_SETUP_ARGUMENTS=(
     --env SMTP_ONLY=1
-    --env PERMIT_DOCKER=network
+    --env DMS_TRUSTED_NETWORKS=172.16.0.0/12
   )
 
   _common_container_setup 'CUSTOM_SETUP_ARGUMENTS'
@@ -32,7 +32,16 @@ function teardown_file() { _default_teardown ; }
   assert_success
 
   # it looks as if someone tries to send mail to another domain outside of DMS
-  _send_email 'email-templates/smtp-only'
+  _send_email \
+    --ehlo mail.origin.test \
+    --protocol SSMTPA \
+    --server mail.origin.test \
+    --from user@origin.test \
+    --to user@destination.test \
+    --auth PLAIN \
+    --auth-user user@origin.test \
+    --auth-password secret
+  assert_success
   _wait_for_empty_mail_queue_in_container
 
   # this seemingly succeeds, but looking at the logs, it doesn't

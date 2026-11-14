@@ -3,9 +3,31 @@ name: 'Publish the DMS Container Image'
 on:
   workflow_call:
     inputs:
-      cache-key:
-        required: true
+      # Release tag (eg `v17.0.0`) to (re)publish, provided by the rebuild workflow. Defaults to the triggering tag, if any:
+      release-tag:
+        required: false
         type: string
+        default: ''
+      # Rebuild counter for the immutable `X.Y.Z-rN` tag (`0` is the original release build):
+      rebuild:
+        required: false
+        type: string
+        default: '0'
+      # Whether this release may move `latest` (only the newest release overall may):
+      latest:
+        required: false
+        type: boolean
+        default: true
+      # Prefix of the GHA cache scopes the images were built into:
+      cache-prefix:
+        required: false
+        type: string
+        default: ''
+      # Build everything but do not push any image:
+      dry-run:
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,73 +36,89 @@ permissions:
 jobs:
   publish-images:
     name: 'Publish'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: 'Checkout'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.release-tag }}
           submodules: recursive
+
+      # Determines which release is published, as `steps.release.outputs.tag`:
+      # - Rebuilds provide `release-tag`. This wins, as they run from `master` and not from the tag.
+      # - Pushing a release tag publishes that tag.
+      # - Otherwise (push to `master`) the tag is empty, which means an `:edge` build.
+      # Later steps check for an empty tag to enable `:edge` and the release tags.
+      # The input is passed via `env` instead of being interpolated into the script, to avoid injection.
+      - name: 'Resolve release tag'
+        id: release
+        shell: bash
+        run: |
+          if [[ -n ${INPUT_TAG} ]]; then
+            echo "tag=${INPUT_TAG}" >>"${GITHUB_OUTPUT}"
+          elif [[ ${GITHUB_REF_TYPE} == tag ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >>"${GITHUB_OUTPUT}"
+          else
+            echo 'tag=' >>"${GITHUB_OUTPUT}"
+          fi
+        env:
+          INPUT_TAG: ${{ inputs.release-tag }}
+
+      # The commit of the published code. For rebuilds this is the release tag, not the triggering `master`.
+      - name: 'Resolve revision'
+        id: revision
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >>"${GITHUB_OUTPUT}"
 
       - name: 'Prepare tags'
         id: prep
-        uses: docker/metadata-action@v4.3.0
+        uses: docker/metadata-action@v6.2.0
         with:
           images: |
             ${{ secrets.DOCKER_REPOSITORY }}
             ${{ secrets.GHCR_REPOSITORY }}
+          flavor: |
+            latest=${{ inputs.latest && 'auto' || 'false' }}
           tags: |
-            type=edge,branch=master
-            type=semver,pattern={{major}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}.{{minor}}.{{patch}}
+            type=edge,branch=master,enable=${{ steps.release.outputs.tag == '' }}
+            type=semver,pattern={{major}},value=${{ steps.release.outputs.tag }},enable=${{ steps.release.outputs.tag != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.release.outputs.tag }},enable=${{ steps.release.outputs.tag != '' }}
+            type=semver,pattern={{major}}.{{minor}}.{{patch}},value=${{ steps.release.outputs.tag }},enable=${{ steps.release.outputs.tag != '' }}
+            type=semver,pattern={{version}}-r${{ inputs.rebuild }},value=${{ steps.release.outputs.tag }},enable=${{ steps.release.outputs.tag != '' }}
 
       - name: 'Set up QEMU'
-        uses: docker/setup-qemu-action@v2.1.0
+        uses: docker/setup-qemu-action@v4.4.0
         with:
           platforms: arm64
 
       - name: 'Set up Docker Buildx'
-        uses: docker/setup-buildx-action@v2.4.1
-
-      # Try get the cached build layers from a prior `generic_build.yml` job.
-      # NOTE: Until adopting `type=gha` scoped cache exporter (in `docker/build-push-action`),
-      # only AMD64 image is expected to be cached, ARM images will build from scratch.
-      - name: 'Retrieve image build from build cache'
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: cache-buildx-${{ inputs.cache-key }}
-          restore-keys: |
-            cache-buildx-
+        uses: docker/setup-buildx-action@v4.4.1
 
       - name: 'Login to DockerHub'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: 'Login to GitHub Container Registry'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 'Acquire the image version'
-        id: get-version
-        shell: bash
-        run: echo "version=$(<VERSION)" >>"${GITHUB_OUTPUT}"
-
       - name: 'Build and publish images'
-        uses: docker/build-push-action@v4.0.0
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
           build-args: |
-            VCS_REVISION=${{ github.sha }}
-            VCS_VERSION=${{ steps.get-version.outputs.version }}
+            DMS_RELEASE=${{ steps.release.outputs.tag || 'edge' }}
+            VCS_REVISION=${{ steps.revision.outputs.sha }}
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ !inputs.dry-run }}
           tags: ${{ steps.prep.outputs.tags }}
-          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-from: |
+            type=gha,scope=${{ inputs.cache-prefix }}linux-amd64
+            type=gha,scope=${{ inputs.cache-prefix }}linux-arm64
           # Disable provenance attestation: https://docs.docker.com/build/attestations/slsa-provenance/
           provenance: false
